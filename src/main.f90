@@ -28,7 +28,7 @@
 !  3. Ciascuna macroparticella e' una carica per unita' di superficie
 !  4. Griglia spaziale uniforme
 !  5. PIC per gli elettroni e gli ioni (funzione peso "linear weighting")
-!  6. Risoluzione eq. di Poisson (SOR+Chebyschev)
+!  6. Risoluzione eq. di Poisson
 !  7. Risoluzione eq. di Maxwell (gradiente a due punti) 
 !  8. Integrazione numerica delle equazioni del moto (metodo leapfrog) 
 !  9. e/Xe collisions: Monte Carlo (Xsect from Szabo)
@@ -348,7 +348,7 @@ USE rand
        ypi(npi)=ype(npe)
        rs=ran2(iseed)
        zpi(npi)=(zch-zacc)+rs*zacc
-!      drifted Maxwellian distribution (Box-Muller transformation): vzi        
+!      Full Maxwellian distribution (Box-Muller transformation): vzi        
        rs1=ran2(iseed)
        rs2=ran2(iseed) 
        if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
@@ -515,7 +515,7 @@ USE rand
        if ((zch-zpe(i)).ge.zacc) then
           ie=ie+1
           zpe(i)=zch
-!         drifting-Maxwellian distribution (Box-Muller transformation)         
+!         Full-Maxwellian distribution (Box-Muller transformation)         
           rs1=ran2(iseed)
           vmod=DSQRT(duekteme*DLOG(rs1))
           rs2=ran2(iseed)
@@ -554,7 +554,7 @@ USE rand
        if (zpi(i).ge.zch) then
           ii=ii+1
           zpi(i)=zch-zacc
-!         drifting-Maxwellian distribution (Box-Muller transformation)         
+!         Full-Maxwellian distribution (Box-Muller transformation)         
           rs1=ran2(iseed)
           vmod=DSQRT(duektimi*DLOG(rs1))
           rs2=ran2(iseed)
