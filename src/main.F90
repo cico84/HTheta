@@ -293,7 +293,11 @@
       subroutine read_input_parameters(out_name, out_path)
             use const_phys
             use system
-            character(len=100), intent(out) :: out_name, out_path, home
+            use part
+            use grid
+            character(len=100), intent(out) :: out_name, out_path
+            character(len=100)              :: home, inp_file
+            integer                         :: istatus
 
             namelist /sim_settings/ out_name, w, dt, yd, zch, zacc, Ez0, Br0, n0, &
                                     Te0, Ti0, npmax, npic, ny
@@ -308,7 +312,7 @@
                   access = 'sequential', status = 'old' )
             if (istatus > 0) then
                   write(*,*) '  ERROR: Input parameters file is invalid'
-                  write(*,*) " Input parameters file:", paths%inp_file_path
+                  write(*,*) " Input parameters file:", inp_file
                   stop
             end if
 
@@ -379,7 +383,7 @@
             use poi
 
             ! Datasets from 0 to ny
-            deallocate( y, vol rhoe, rhoi, phi, Ey, dpoi)
+            deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi)
             
             ! Datasets from 1 to npmax
             deallocate(  ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi, &
@@ -709,7 +713,7 @@
 
       !*****************************************************************************       
 
-      FUNCTION ran2(i)
+      function ran2(i)
       
             ! Random number generator
             ! Long period (> 2.E18) random number generator of l'Ecuyer with Bays-Durham shuffle and added safeguards.
@@ -717,7 +721,7 @@
             ! Call with idum a negative integer to initialize; thereafter, do not alter idum between successive deviates in a sequence.
             ! RNMX should approximate the largest floating value that is less than 1.
             
-            IMPLICIT REAL*8 (a-h,o-z)
+            implicit real*8 (a-h,o-z)
             parameter (im1=2147483563,im2=2147483399,am=1./im1,imm1=im1-1)
             parameter (ia1=40014,ia2=40692,iq1=53668,iq2=52774,ir1=12211)
             parameter (ir2=3791,ntab=32,ndiv=1+imm1/ntab)
