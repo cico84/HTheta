@@ -1,7 +1,7 @@
 SRCDIR = ${HTHETA}/src/
 OBJDIR = ${HTHETA}/bin/objects/
 FC     = ifort
-OPTS_F = -D$(VERBOSE) -O3 -module $(OBJDIR) -xHost -mcmodel medium -shared-intel -warn all -warn noexternals
+OPTS_F = -D$(VERBOSE) -O3 -module $(OBJDIR) -xHost -mcmodel medium -shared-intel # -warn all -warn noexternals
 OPTS_OMP = -qopenmp
 
 LIBLIST  = 
