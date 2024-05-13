@@ -324,6 +324,9 @@
             consti = q*dt/Mi
             wq     = w*q 
 
+            write(*,*) " Read parameters:", out_name, w, dt, yd, zch, zacc, Ez0, Br0, n0, Te0, Ti0, npmax, npic, ny
+            write(*,*) " HTHETA: running simulation..."
+
             return
 
       end subroutine
