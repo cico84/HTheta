@@ -50,101 +50,104 @@
 
       ! Modules
 
-      MODULE const_phys
+      module const_phys
             ! Physical and mathematical constants
-            IMPLICIT NONE
-            SAVE
-            DOUBLE PRECISION, PARAMETER :: pi	  = acos(-1.d0)    ! Pi Greek
-            DOUBLE PRECISION, PARAMETER :: eps0	  = 8.854188d-12   ! Vacuum Dielectric Constant
-            DOUBLE PRECISION, PARAMETER :: q	  = 1.602189d-19   ! Electric charge [C]
-            DOUBLE PRECISION, PARAMETER :: me	  = 9.1093897d-31  ! Electron mass [Kg]
-            DOUBLE PRECISION, PARAMETER :: Mi	  = 2.1801714d-25	 ! Xenon atom Mass (Xe) [Kg]
-            DOUBLE PRECISION, PARAMETER :: kB	  = 1.380662d-23   ! Boltzmann Constant [J/K]
-            DOUBLE PRECISION, PARAMETER :: JtoeV  = 6.24146d18 	 ! Conversion factor from J to eV
-            DOUBLE PRECISION, PARAMETER :: eVtoK  = 11600          ! Conversion factor from eV to K
-            DOUBLE PRECISION, PARAMETER :: duepi  = 2.*pi
-            DOUBLE PRECISION            :: w                       ! Macroparticle's statistical weight (INPUT)
-            DOUBLE PRECISION            :: dt                      ! Timestep [s] (INPUT)
-            DOUBLE PRECISION            :: conste
-            DOUBLE PRECISION            :: consti
-            DOUBLE PRECISION            :: wq
-      END MODULE const_phys
+            implicit none
+            save
+            double precision, parameter :: pi	  = acos(-1.d0)    ! Pi Greek
+            double precision, parameter :: eps0	  = 8.854188d-12   ! Vacuum Dielectric Constant
+            double precision, parameter :: q	  = 1.602189d-19   ! Electric charge [C]
+            double precision, parameter :: me	  = 9.1093897d-31  ! Electron mass [Kg]
+            double precision, parameter :: Mi	  = 2.1801714d-25	 ! Xenon atom Mass (Xe) [Kg]
+            double precision, parameter :: kB	  = 1.380662d-23   ! Boltzmann Constant [J/K]
+            double precision, parameter :: JtoeV  = 6.24146d18 	 ! Conversion factor from J to eV
+            double precision, parameter :: eVtoK  = 11600          ! Conversion factor from eV to K
+            double precision, parameter :: duepi  = 2.*pi
+            double precision            :: w                       ! Macroparticle's statistical weight (INPUT)
+            double precision            :: dt                      ! Timestep [s] (INPUT)
+            double precision            :: conste
+            double precision            :: consti
+            double precision            :: wq
+      end module const_phys
 
-      MODULE system
+      module system
             ! Physical external parameters
-            IMPLICIT NONE
-            SAVE
-            DOUBLE PRECISION :: yd                  ! Azimuthal domain length [m] (INPUT)
-            DOUBLE PRECISION :: zch                 ! Channel length [m] (INPUT)
-            DOUBLE PRECISION :: zacc                ! Axial domain length [m] (INPUT)
-            DOUBLE PRECISION :: Ez0                 ! Axial electric field [V/m] (INPUT)
-            DOUBLE PRECISION :: Br0                 ! Radial magnetic field [T] (INPUT)
-            DOUBLE PRECISION :: n0                  ! Average plasma density [/m3] (INPUT)
-            DOUBLE PRECISION :: Te0                 ! Initial electron temperature [K] (INPUT)
-            DOUBLE PRECISION :: Ti0                 ! Initial ion temperature [k] (INPUT)
-      END MODULE system
+            implicit none
+            save
+            double precision :: yd                  ! Azimuthal domain length [m] (INPUT)
+            double precision :: zch                 ! Channel length [m] (INPUT)
+            double precision :: zacc                ! Axial domain length [m] (INPUT)
+            double precision :: Ez0                 ! Axial electric field [V/m] (INPUT)
+            double precision :: Br0                 ! Radial magnetic field [T] (INPUT)
+            double precision :: n0                  ! Average plasma density [/m3] (INPUT)
+            double precision :: Te0                 ! Initial electron temperature [K] (INPUT)
+            double precision :: Ti0                 ! Initial ion temperature [k] (INPUT)
+      end module system
 
-      MODULE grid
-            USE const_phys
-            USE system
-            IMPLICIT NONE
-            SAVE
-            INTEGER                                     :: ny         ! Number of cells along azimuthal direction (INPUT)
-            DOUBLE PRECISION                            :: dy, duedy
+      module grid
+            use const_phys
+            use system
+            implicit none
+            save
+            integer                                     :: ny         ! Number of cells along azimuthal direction (INPUT)
+            double precision                            :: dy, duedy
             ! Datasets from 0 to ny
-            DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: y, vol
-      END MODULE grid
+            double precision, allocatable, dimension(:) :: y, vol
+      end module grid
 
-      MODULE poi
-            USE grid
-            IMPLICIT NONE
-            SAVE
-            DOUBLE PRECISION                            :: apoi, bpoi, cpoi
+      module poi
+            use grid
+            implicit none
+            save
+            double precision                            :: apoi, bpoi, cpoi
             ! Datasets from 0 to ny
-            DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: rhoe,rhoi,phi,Ey,dpoi
-      END MODULE poi
+            double precision, allocatable, dimension(:) :: rhoe,rhoi,phi,Ey,dpoi
+      end module poi
 
-      MODULE part
-            USE grid
-            IMPLICIT NONE
-            SAVE
-            INTEGER            :: npmax,npic
-            INTEGER 		 :: npe,npi
+      module part
+            use grid
+            implicit none
+            save
+            integer            :: npmax,npic
+            integer 		 :: npe,npi
             ! Datasets from 1 to npmax
-            DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: ype, zpe, vxpe, vype, vzpe
-            DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: ypi, zpi, vxpi, vypi, vzpi
-            DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: wye, Eype, wyi, Eypi
-            DOUBLE PRECISION                            :: vxpeprox, vxpiprox
-            INTEGER         , ALLOCATABLE, DIMENSION(:) :: jpe, jpi
-      END MODULE part
+            double precision, allocatable, dimension(:) :: ype, zpe, vxpe, vype, vzpe
+            double precision, allocatable, dimension(:) :: ypi, zpi, vxpi, vypi, vzpi
+            double precision, allocatable, dimension(:) :: wye, Eype, wyi, Eypi
+            double precision                            :: vxpeprox, vxpiprox
+            integer         , allocatable, dimension(:) :: jpe, jpi
+      end module part
 
-      MODULE diagn
-            IMPLICIT NONE
-            SAVE
-            CHARACTER(LEN=100) :: out_name  ! Name of output files related to this simulation (INPUT)
-            CHARACTER(LEN=100) :: out_path
-            DOUBLE PRECISION   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
-            INTEGER            :: npinit
-      END MODULE diagn
+      module diagn
+            implicit none
+            save
+            character(len=100) :: out_name  ! Name of output files related to this simulation (INPUT)
+            character(len=100) :: out_path
+            double precision   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
+            integer            :: npinit
+      end module diagn
 
-      MODULE rand
-            IMPLICIT NONE
-            SAVE
-            INTEGER          :: iseed
-            DOUBLE PRECISION :: rs, rs1, rs2
-      END MODULE rand
+      module rand
+            implicit none
+            save
+            integer          :: iseed
+            double precision :: rs, rs1, rs2
+      end module rand
 
       program HTheta
             
-            USE poi
-            USE part
-            USE diagn
-            USE rand
-            USE const_phys
-            USE system
-            USE grid 
-            USE poi
-            USE part
+            use poi
+            use part
+            use diagn
+            use rand
+            use const_phys
+            use system
+            use grid 
+            use poi
+            use part
+            
+            double precision :: gen, ran2
+            integer          :: ipic, j, i 
 
       !******************************************************************************
       !******************************************************************************
@@ -288,10 +291,9 @@
       !******************************************************************************
       !******************************************************************************
       subroutine read_input_parameters(out_name, out_path)
-            
-            character(LEN=100), intent(out) :: out_name, out_path
-            USE const_phys
-            USE system
+            use const_phys
+            use system
+            character(len=100), intent(out) :: out_name, out_path, home
 
             namelist /sim_settings/ out_name, w, dt, yd, zch, zacc, Ez0, Br0, n0, &
                                     Te0, Ti0, npmax, npic, ny
@@ -326,11 +328,11 @@
             ! This subroutine allocates the arrays required along the azimuthal direction
             ! and those related to macro-particles
 
-            USE const_phys
-            USE system
-            USE grid
-            USE part
-            USE poi
+            use const_phys
+            use system
+            use grid
+            use part
+            use poi
 
             ! Datasets from 0 to ny
             allocate( y   (0:ny) )
@@ -372,9 +374,9 @@
             ! This subroutine allocates the arrays required along the azimuthal direction
             ! and those related to macro-particles
 
-            USE grid
-            USE part
-            USE poi
+            use grid
+            use part
+            use poi
 
             ! Datasets from 0 to ny
             deallocate( y, vol rhoe, rhoi, phi, Ey, dpoi)
@@ -392,9 +394,9 @@
             
       subroutine mesh 
           
-            USE grid
-            IMPLICIT NONE
-            INTEGER :: j
+            use grid
+            implicit none
+            integer :: j
       
             y(0)  =  0.
             dy    = yd/ny
@@ -417,14 +419,14 @@
 
       subroutine init 
           
-            USE grid
-            USE part
-            USE diagn
-            USE rand
-            IMPLICIT NONE
-            INTEGER                    :: i
-            DOUBLE PRECISION           :: duekteme,duektimi,vmod,ang
-            DOUBLE PRECISION, EXTERNAL :: ran2
+            use grid
+            use part
+            use diagn
+            use rand
+            implicit none
+            integer                    :: i
+            double precision           :: duekteme,duektimi,vmod,ang
+            double precision, external :: ran2
       
             npe = 0
             npi = 0
@@ -486,10 +488,10 @@
 
       subroutine scatter 
      
-            USE poi
-            USE part
-            IMPLICIT NONE
-            INTEGER          :: i,j
+            use poi
+            use part
+            implicit none
+            integer          :: i,j
       
             ! Charge density initialization to 0
             do j = 0, ny
@@ -539,11 +541,11 @@
 
       subroutine fieldsolve 
       
-            USE poi
-            USE part
-            IMPLICIT NONE
-            INTEGER          :: j
-            DOUBLE PRECISION :: rnap(ny-1),snap(ny-1),tnap(ny-1),den
+            use poi
+            use part
+            implicit none
+            integer          :: j
+            double precision :: rnap(ny-1),snap(ny-1),tnap(ny-1),den
 
             !******************************************************************************       
       
@@ -585,14 +587,14 @@
 
       subroutine push
           
-            USE poi
-            USE part
-            USE rand
-            IMPLICIT NONE
-            INTEGER                    :: i,ie,ii
-            DOUBLE PRECISION           :: tB,tBB,duekteme,duektimi,vmod,ang
-            DOUBLE PRECISION           :: vyea,vyeb,vyec,vzea,vzeb,vzec
-            DOUBLE PRECISION, EXTERNAL :: ran2
+            use poi
+            use part
+            use rand
+            implicit none
+            integer                    :: i,ie,ii
+            double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
+            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec
+            double precision, external :: ran2
 
             ! Electrons      
 
