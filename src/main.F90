@@ -145,7 +145,8 @@
             use grid 
             use poi
             use part
-            
+
+            implicit none
             double precision :: gen, ran2
             integer          :: ipic, j, i 
 
@@ -291,10 +292,12 @@
       !******************************************************************************
       !******************************************************************************
       subroutine read_input_parameters(out_name, out_path)
+            
             use const_phys
             use system
             use part
             use grid
+            implicit none
             character(len=100), intent(out) :: out_name, out_path
             character(len=100)              :: home, inp_file
             integer                         :: istatus
@@ -337,6 +340,7 @@
             use grid
             use part
             use poi
+            implicit none
 
             ! Datasets from 0 to ny
             allocate( y   (0:ny) )
@@ -381,6 +385,7 @@
             use grid
             use part
             use poi
+            implicit none
 
             ! Datasets from 0 to ny
             deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi)
@@ -429,7 +434,7 @@
             use rand
             implicit none
             integer                    :: i
-            double precision           :: duekteme,duektimi,vmod,ang
+            double precision           :: duekteme, duektimi
             double precision, external :: ran2
       
             npe = 0
