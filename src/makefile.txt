@@ -1,0 +1,25 @@
+SRCDIR = ${HTHETA}/src
+OBJDIR = ${HTHETA}/bin/objects
+FC     = ifort
+OPTS_F = -D$(VERBOSE) -O3 -module $(OBJDIR) -xHost -mcmodel medium -shared-intel -warn all -warn noexternals
+OPTS_OMP = -qopenmp
+
+LIBLIST  = 
+INCLIST  = 
+
+PROG = ${HTHETA}/bin/htheta.exe
+
+main           = ${OBJDIR}/main
+
+OBJC = $(main).o
+
+all :: HTHETA
+
+HTHETA: $(OBJC)
+	$(FC) $(OPTS_F) $(OBJC) $(OPTS_OMP) ${LIBLIST} -o $(PROG)
+
+clobber: clean
+	rm -f $(SRCDIR)/*.optrpt $(OBJDIR)/*.o $(OBJDIR)/*.mod
+
+$(main).o: ${SRCDIR}/main.F90
+	$(FC) $(OPTS_F) $(OPTS_OMP) $(INCLIST) -c $< -o $@
