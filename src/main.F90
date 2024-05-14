@@ -324,7 +324,20 @@
             consti = q*dt/Mi
             wq     = w*q 
 
-            write(*,*) " Read parameters:", out_name, w, dt, yd, zch, zacc, Ez0, Br0, n0, Te0, Ti0, npmax, npic, ny
+            write(*,*) " Read parameters:"
+            write(*,*) " Output file name:", out_name
+            write(*,*) " Macro-particle statistical weight:", w
+            write(*,*) " PIC time step [s]:"
+            write(*,*) " Extension along the azimuthal direction [m]:" yd
+            write(*,*) " Extension of channel [m]:", zch
+            write(*,*) " Acceleration region extension [m]:", zacc
+            write(*,*) " Axial electric field [V/m]:", Ez0
+            write(*,*) " Radial magnetic field [T]:", Br0
+            write(*,*) " Plasma density [/m3]:", n0
+            write(*,*) " Electron and ion temperatures [K]:", Te0, Ti0
+            write(*,*) " Max. number of macro-particles per species:", npmax
+            write(*,*) " Number of PIC time steps:", npic
+            write(*,*) " Number of cells along the azimuthal direction:", ny
             write(*,*) " HTHETA: running simulation..."
 
             return
