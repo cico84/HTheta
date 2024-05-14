@@ -132,6 +132,9 @@
             save
             integer          :: iseed
             double precision :: rs, rs1, rs2
+            integer*8			             :: iseed
+            !$omp threadprivate(iseed)
+            integer*8, dimension(:), allocatable :: seedNum ! Random seeds of the parallel threads
       end module rand
 
       program HTheta
@@ -148,7 +151,6 @@
             use omp_lib
 
             implicit none
-            double precision :: gen, ran2
             integer          :: ipic, j, i 
 
       !******************************************************************************
@@ -218,8 +220,11 @@
             !******************************************************************************   
 
             ! Initialization of random numbers generator
-            iseed = -1
-            gen   = ran2(iseed)
+            !iseed = -1
+            !gen   = ran2(iseed)
+            ini_seed = 1000000
+            allocate( seedNum(nthreads) )
+            call ini_seeds (nthreads, ini_seed, seedNum )
 
             !******************************************************************************
 
@@ -460,6 +465,8 @@
       
             npe = 0
             npi = 0
+
+            iseed    = seedNum(1)
       
             duekteme = -2.*kB*Te0 / me
             duektimi = -2.*kB*Ti0 / Mi
@@ -622,20 +629,31 @@
             use poi
             use part
             use rand
+            use omp_lib
             implicit none
-            integer                    :: i,ie,ii
+            integer                    :: i,ie,ii,thread_num
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
             double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec
             double precision, external :: ran2
 
-            ! Electrons      
-
             ! Leapfrog method (Boris algorithm)
             tB  = conste*Br0
             tBB = 2.*tB/(1.+tB**2)
-            duekteme = -2.*kB*Te0/me
+            duekteme = -2.*kB*Te0/me   ! Electrons leap frog constant
+            duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
-            ie = 0
+            !$omp parallel default(none) firstprivate(tB, tBB, duekteme, duektimi, conste, consti, Ez0, dt, zch, zacc, duepi) &
+            !$omp                             private(thread_num, iseed, ie, ii, i, vyea, vzea, vyeb, vzeb, vyec, vzec,       &
+            !$omp                                     rs1, rs2, ang, vmod, vxpeprox, vxpiprox)                                &
+            !$omp                              shared(ny, y, Ey, npe, npi, Eype, Eypi, wye, wyi, jpe, jpi, vxpe, vype, vzpe,  &
+            !$omp                                     vxpi, vypi, vzpi, ype, zpe, ypi, zpi)
+            thread_num  = omp_get_thread_num()
+            iseed       = seedNum (thread_num+1)
+            ie          = 0
+            ii          = 0
+
+            ! Electrons loop
+            !$omp do
             do i = 1, npe
                   Eype(i)=wye(i)*Ey(jpe(i)-1)+(1.-wye(i))*Ey(jpe(i))
                   ! first half acceleration by electric field
@@ -681,10 +699,10 @@
                         vzpe(i)=vmod*DSIN(ang)
                   end if
             end do
+            !$omp end do
 
-            ! Ions    
-            duektimi = -2.*kB*Ti0/Mi
-            ii=0  
+            !$omp do
+            ! Ions loop   
             do i=1,npi
                   Eypi(i)=wyi(i)*Ey(jpi(i)-1)+(1.-wyi(i))*Ey(jpi(i))
                   vypi(i)=vypi(i)+consti*Eypi(i)
@@ -720,7 +738,8 @@
                         vzpi(i)=vmod*DSIN(ang)
                   end if
             end do
-
+            !$omp end do
+            !$omp end parallel
 
             !******************************************************************************
             !******************************************************************************        
@@ -740,53 +759,89 @@
 
 
       !*****************************************************************************       
-
       function ran2(i)
-      
-            ! Random number generator
-            ! Long period (> 2.E18) random number generator of l'Ecuyer with Bays-Durham shuffle and added safeguards.
-            ! Returns a uniform random deviate between 0.0 and 1.0 (exclusive of the endpoint values).
-            ! Call with idum a negative integer to initialize; thereafter, do not alter idum between successive deviates in a sequence.
-            ! RNMX should approximate the largest floating value that is less than 1.
+  
+            !Long period (> 2.E18) random number generator of l'Ecuyer with Bays-Durham shuffle and added safeguards (from Numerical Recipes).
+            !Returns a uniform random deviate between 0.0 and 1.0 (exclusive of the endpoint values).
+            !Call with idum a negative integer to initialize; thereafter, do not alter idum between successive deviates in a sequence.
+            !RNMX should approximate the largest floating value that is less than 1.
+            implicit none
             
-            implicit real*8 (a-h,o-z)
-            parameter (im1=2147483563,im2=2147483399,am=1./im1,imm1=im1-1)
-            parameter (ia1=40014,ia2=40692,iq1=53668,iq2=52774,ir1=12211)
-            parameter (ir2=3791,ntab=32,ndiv=1+imm1/ntab)
-            parameter (epsr=1.2e-7,rnmx=1.-epsr)
-            integer iv(ntab)
-            save iv,iy,idum2
-            data idum2/123456789/, iv/ntab*0/, iy/0/
+            integer*8, parameter :: im1=2147483563, im2=2147483399, imm1=im1-1
+            real*8, parameter    :: am=1./im1
+            integer*8, parameter :: ia1=40014, ia2=40692, iq1=53668,iq2=52774, ir1=12211
+            integer*8, parameter :: ir2=3791, ntab=32, ndiv=1+imm1/ntab
+            real*8, parameter    :: epsr = 1.2e-7, rnmx = 1.-epsr
             
+            integer*8 :: naux
+            integer*8, save :: iv(ntab)=[(0, naux = 1, ntab)]
+            integer*8, save :: iy=0, idum2 = 123456789      !!!data idum2/123456789/, iv/ntab*0/, iy/0/
+            integer*8, save  :: idum
+            !$omp threadprivate(iv, iy, idum2, idum)
+            integer*8  :: j, k
+            
+            integer*8, intent(inout) :: i
+            real*8 :: ran2
+          
             idum=i
+        
             if (idum.le.0) then              
-            if (idum.eq.0) idum=-1          
-            idum=-idum                
-            idum2=idum
-            do j=ntab+8,1,-1             
-            k=idum/iq1
-            if (idum.lt.0) idum=idum+im1
-            if (j.le.ntab) iv(j)=idum
-            end do
-            iy=iv(1)
+              if (idum.eq.0) idum=-1          
+              idum=-idum                
+              idum2=idum
+              do j=ntab+8,1,-1             
+                k=idum/iq1
+                if (idum.lt.0) idum=idum+im1
+                if (j.le.ntab) iv(j)=idum
+              end do
+              iy=iv(1)
             end if
+        
             k=idum/iq1                     
-            idum=ia1*(idum-k*iq1)-k*ir1     
-            if (idum.lt.0) idum=idum+im1      
+            idum=ia1*(idum-k*iq1)-k*ir1
+        
+            if (idum.lt.0) idum=idum+im1
+        
             k=idum2/iq2
-            idum2=ia2*(idum2-k*iq2)-k*ir2  
-            if (idum2.lt.0) idum2=idum2+im2   
+            idum2=ia2*(idum2-k*iq2)-k*ir2
+        
+            if (idum2.lt.0) idum2=idum2+im2 
+        
             j=1+iy/ndiv 
             iy=iv(j)-idum2                               
-            iv(j)=idum                      
+            iv(j)=idum
+                                 
             if (iy.lt.1) iy=iy+imm1
-
+        
             i=idum
-
+        
             ran2=min(am*iy,rnmx)          
-
+        
             return
-      end function
+          end function
+        
+          subroutine ini_seeds (nthreads, seedNum0, seeds)
+            ! This subroutine initializes the seeds of a ran2 pseudo random number generator
+            ! ----------------------------------------------- INPUTS/OUTPUTS  ----------------------------------------------------
+            integer*4, intent(in)                        :: nthreads    ! Number of parallel threads
+            integer*8, intent(in)                        :: seedNum0    ! Global simulation seed number
+            ! --------------------------------------------------- OUTPUTS --------------------------------------------------------
+            integer*8, dimension(nthreads), intent(out)  :: seeds       ! Initial seeds for the parallel threads
+            ! ---------------------------------------------- INTERNAL VARIABLES --------------------------------------------------
+            integer*8                                    :: i, seed
+            real*4                                       :: ran_num
+            ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE -------------------------------------------
+            seed      = - seedNum0      ! Must be negative
+            ! First thread uses the global simulation seed
+            seeds(1)  = - seedNum0      ! Must be negative
+            ! The other threads use a random generated seed number (negative)
+            do i = 2, nthreads
+              ran_num  = ran2( seed )
+              seeds(i) = - int(ran_num * 2147483647.0, kind=8)   ! Must be negative
+            end do
+            !write(*,*) " Initial seeds of the used threads:", seeds(1:nthreads)
+        
+          end subroutine ini_seeds
 
 !*****************************************************************************
 !*****************************************************************************
