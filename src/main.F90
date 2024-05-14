@@ -151,6 +151,7 @@
 
             implicit none
             integer          :: ipic, j, i 
+            integer*8        :: ini_seed
 
       !******************************************************************************
       !******************************************************************************
@@ -838,7 +839,7 @@
               ran_num  = ran2( seed )
               seeds(i) = - int(ran_num * 2147483647.0, kind=8)   ! Must be negative
             end do
-            !write(*,*) " Initial seeds of the used threads:", seeds(1:nthreads)
+            write(*,*) " Initial seeds of the used threads:", seeds(1:nthreads)
         
           end subroutine ini_seeds
 
