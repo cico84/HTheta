@@ -646,7 +646,7 @@
             !$omp                             private(thread_num, ie, ii, i, vyea, vzea, vyeb, vzeb,                   &
             !$omp                                     vyec, vzec, rs1, rs2, ang, vmod, vxpeprox, vxpiprox)             &
             !$omp                              shared(ny, y, Ey, npe, npi, Eype, Eypi, wye, wyi, jpe, jpi, vxpe,       &
-            !$omp                                     vype, vzpe, vxpi, vypi, vzpi, ype, zpe, ypi, zpi)
+            !$omp                                     vype, vzpe, vxpi, vypi, vzpi, ype, zpe, ypi, zpi, seedNum)
             thread_num  = omp_get_thread_num()
             iseed       = seedNum (thread_num+1)
             ie          = 0
