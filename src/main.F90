@@ -643,8 +643,8 @@
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
             !$omp parallel default(none) firstprivate(tB, tBB, duekteme, duektimi, conste, consti, Ez0, dt, zch, zacc) &
-            !$omp                             private(thread_num, iseed, ie, ii, i, vyea, vzea, vyeb, vzeb,            &
-            !$omp                                     vyec, vzec, rs1, rs2, ang, vmod, vxpeprox, vxpiprox)                                &
+            !$omp                             private(thread_num, ie, ii, i, vyea, vzea, vyeb, vzeb,                   &
+            !$omp                                     vyec, vzec, rs1, rs2, ang, vmod, vxpeprox, vxpiprox)             &
             !$omp                              shared(ny, y, Ey, npe, npi, Eype, Eypi, wye, wyi, jpe, jpi, vxpe,       &
             !$omp                                     vype, vzpe, vxpi, vypi, vzpi, ype, zpe, ypi, zpi)
             thread_num  = omp_get_thread_num()
