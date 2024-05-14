@@ -162,7 +162,7 @@
       !******************************************************************************
 
             ! Read input parameters
-            call read_input_parameters(out_name, out_path)
+            call read_input_parameters(out_name, out_path, nthreads)
 
             ! Allocate data vectors
             call allocate_fields()
@@ -295,16 +295,16 @@
 
       !******************************************************************************
       !******************************************************************************
-      subroutine read_input_parameters(out_name, out_path)
+      subroutine read_input_parameters(out_name, out_path, nthreads)
             
             use const_phys
             use system
             use part
             use grid
-            use diagn
             implicit none
             character(len=100), intent(out) :: out_name, out_path
             character(len=100)              :: home, inp_file
+            integer,            intent(out) :: nthreads 
             integer                         :: istatus
 
             namelist /sim_settings/ out_name, nthreads, w, dt, yd, zch, zacc, Ez0, Br0, &
@@ -332,8 +332,8 @@
             write(*,*) " Read parameters:"
             write(*,*) " Output file name:", out_name
             write(*,*) " Macro-particle statistical weight:", w
-            write(*,*) " PIC time step [s]:"
-            write(*,*) " Extension along the azimuthal direction [m]:" yd
+            write(*,*) " PIC time step [s]:", dt
+            write(*,*) " Extension along the azimuthal direction [m]:", yd
             write(*,*) " Extension of channel [m]:", zch
             write(*,*) " Acceleration region extension [m]:", zacc
             write(*,*) " Axial electric field [V/m]:", Ez0
