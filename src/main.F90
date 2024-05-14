@@ -124,7 +124,7 @@
             character(len=100) :: out_name  ! Name of output files related to this simulation (INPUT)
             character(len=100) :: out_path
             double precision   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
-            integer            :: npinit
+            integer            :: npinit, nthreads
       end module diagn
 
       module rand
@@ -145,6 +145,7 @@
             use grid 
             use poi
             use part
+            use omp_lib
 
             implicit none
             double precision :: gen, ran2
@@ -165,6 +166,9 @@
 
             ! Allocate data vectors
             call allocate_fields()
+
+            ! Set number of active Open MP threads
+            call omp_set_num_threads(nthreads)
 
             ! Plasma parameters estimations
             ! Debye length
@@ -297,13 +301,14 @@
             use system
             use part
             use grid
+            use diagn
             implicit none
             character(len=100), intent(out) :: out_name, out_path
             character(len=100)              :: home, inp_file
             integer                         :: istatus
 
-            namelist /sim_settings/ out_name, w, dt, yd, zch, zacc, Ez0, Br0, n0, &
-                                    Te0, Ti0, npmax, npic, ny
+            namelist /sim_settings/ out_name, nthreads, w, dt, yd, zch, zacc, Ez0, Br0, &
+                                    n0, Te0, Ti0, npmax, npic, ny
 
             ! Read the standard input file to read the simulation name (ID 1)
             call getenv('HTHETA', home)
@@ -523,7 +528,10 @@
                   rhoe(j)=0.
                   rhoi(j)=0.
             end do
-
+            
+            !$omp parallel default(none) firstprivate(wq) private(i,j) shared(ny, vol, npe, npi,      &
+            !$omp                        wye, wyi, y, dy, ype, jpe, ypi, jpi) reduction(+: rhoe, rhoi)  
+            !$omp do 
             ! Electron charge deposition on the mesh points 
             do i = 1, npe     
                   ! Charge density weighting (linear weighting, CIC)
@@ -532,6 +540,7 @@
                   rhoe(jpe(i)-1)=wye(i)*wq+rhoe(jpe(i)-1)
                   rhoe(jpe(i))=(1.-wye(i))*wq+rhoe(jpe(i))
             end do
+            !$omp end do
 
             ! Periodic boundary conditions
             rhoe(0)  = rhoe(0) + rhoe(ny)   
@@ -556,6 +565,8 @@
                   rhoi(j)=rhoi(j)/vol(j)
             end do
             
+            !$omp parallel do
+
             return
 
       end subroutine

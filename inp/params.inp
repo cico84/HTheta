@@ -1,5 +1,6 @@
 &sim_settings
 out_name = 'sim01'   ! Output file name
+nthreads = 20        ! Number of Open MP threads
 w        = 5.d8      ! Macroparticle's statistical weight
 dt       = 1.d-12    ! Timestep [s]
 yd       = 0.05      ! Azimuthal domain length [m]
