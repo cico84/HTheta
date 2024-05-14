@@ -1,7 +1,7 @@
 &sim_settings
-out_name = 'sim01'   ! Output file name
+out_name = 'sim02'   ! Output file name
 nthreads = 20        ! Number of Open MP threads
-w        = 5.d8      ! Macroparticle's statistical weight
+w        = 5.d7      ! Macroparticle's statistical weight
 dt       = 1.d-12    ! Timestep [s]
 yd       = 0.05      ! Azimuthal domain length [m]
 zch      = 0.025     ! Channel length [m]
@@ -12,6 +12,6 @@ n0       = 5.e17     ! Average plasma density [/m3]
 Te0      = 116000    ! Initial electron temperature [K]
 Ti0      = 2320      ! Initial ion temperature [k]
 npmax    = 500000000 ! Maximum number of macro-particles in the domain
-npic     = 2000      ! Total number of PIC cycles
+npic     =  200      ! Total number of PIC cycles
 ny       = 5000      ! Number of cells along the azimuthal direction
 /	
