@@ -541,14 +541,7 @@
                   rhoe(jpe(i))=(1.-wye(i))*wq+rhoe(jpe(i))
             end do
             !$omp end do
-
-            ! Periodic boundary conditions
-            rhoe(0)  = rhoe(0) + rhoe(ny)   
-            rhoe(ny) = rhoe(0)
-            do j = 0, ny
-                  rhoe(j)=rhoe(j)/vol(j)
-            end do
-
+            !$omp do 
             ! Ion charge deposition on the mesh points 
             do i=1,npi       
                   ! Charge density weighting (linear weighting, CIC) 
@@ -557,15 +550,18 @@
                   rhoi(jpi(i)-1)=wyi(i)*wq+rhoi(jpi(i)-1)
                   rhoi(jpi(i))=(1.-wyi(i))*wq+rhoi(jpi(i))                   
             end do
+            !$omp end do
+            !$omp end parallel
 
-            ! Periodic boundary condition 
-            rhoi(0)=rhoi(0)+rhoi(ny)   
-            rhoi(ny)=rhoi(0)      
-            do j=0,ny
+            ! Periodic boundary conditions for both ion and electron charge density
+            rhoe(0)  = rhoe(0) + rhoe(ny)   
+            rhoe(ny) = rhoe(0)
+            rhoi(0)  = rhoi(0) + rhoi(ny)   
+            rhoi(ny) = rhoi(0)      
+            do j = 0, ny
+                  rhoe(j)=rhoe(j)/vol(j)
                   rhoi(j)=rhoi(j)/vol(j)
             end do
-            
-            !$omp parallel do
 
             return
 
