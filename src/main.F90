@@ -130,8 +130,7 @@
       module rand
             implicit none
             save
-            integer          :: iseed
-            double precision :: rs, rs1, rs2
+            double precision                     :: rs, rs1, rs2
             integer*8			             :: iseed
             !$omp threadprivate(iseed)
             integer*8, dimension(:), allocatable :: seedNum ! Random seeds of the parallel threads
