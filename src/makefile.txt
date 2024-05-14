@@ -18,7 +18,8 @@ all :: HTHETA
 HTHETA: $(OBJC)
 	$(FC) $(OPTS_F) $(OBJC) $(OPTS_OMP) ${LIBLIST} -o $(PROG)
 
-clobber: rm -f $(SRCDIR)/*.optrpt $(OBJDIR)/*.o $(OBJDIR)/*.mod
+clean: 
+rm -f $(SRCDIR)/*.optrpt $(OBJDIR)/*.o $(OBJDIR)/*.mod
 
 $(main).o: ${SRCDIR}/main.F90
 	$(FC) $(OPTS_F) $(OPTS_OMP) $(INCLIST) -c $< -o $@
