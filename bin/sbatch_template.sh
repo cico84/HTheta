@@ -7,7 +7,7 @@
 #SBATCH --mem=494000                 # mem per node (MB)
 #SBATCH --time=24:00:00              # time limit (d-hh:mm:ss)
 #SBATCH --account=tra24_openhack_0   # account ($ saldo -b)
-#SBATCH --partition=boost_fua_prod   # partition name
+#SBATCH --partition=gll_all_serial   # partition name
 #SBATCH --qos=normal                 # quality of service
 
 module purge
