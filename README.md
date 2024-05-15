@@ -2,7 +2,7 @@
 Particle-in-cell code for the simulation of the theta-angle dynamics inside a Hall thruster
 
 # Compilation and running instructions (not on the CINECA cluster)
-1) Create the environmental variable HTHETA pointing to the location of the repository
+1) Create the environmental variable HTHETA pointing to the location of the repository (this can be added to .bashrc to avoid having to do it every time the shell is entered)
 export HTHETA=local_path_2_main_folder_repository  
 2) Compile the latest code version, by typing in the /src folder the following command:
 make clean –f makefile.txt
