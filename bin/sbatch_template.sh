@@ -25,4 +25,5 @@ export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${NVHPC_HOME}/Linux_x86_64/24.3/cuda/lib64/
 
 #srun ./htheta.exe
-srun nvprof -o prof_out ./htheta.exe
+#srun nvprof -o prof_out ./htheta.exe
+nsys profile -t cuda,nvtx,openacc ./htheta.exe
