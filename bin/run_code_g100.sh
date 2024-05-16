@@ -1,5 +1,4 @@
 # Load required modules for compilation
-module purge
 module load nvhpc/24.3
 
 # Compile code, if necessary

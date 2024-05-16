@@ -10,7 +10,6 @@
 #SBATCH --partition=boost_usr_prod   # partition name
 #SBATCH --qos=normal                 # quality of service
 
-module purge
 module load nvhpc/24.3
 
 export KMP_AFFINITY=compact
