@@ -229,6 +229,8 @@
       !*                                                                            *  
       !******************************************************************************
 
+            call nvtxStartRange('START CODE')
+
             ! Read input parameters
             call read_input_parameters(out_name, out_path, nthreads)
 
@@ -349,6 +351,8 @@
             !******************************************************************************
 
             call deallocate_fields()
+
+            call nvtxEndRange
                         
       end program
 
