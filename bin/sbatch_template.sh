@@ -11,7 +11,7 @@
 #SBATCH --qos=normal                 # quality of service
 
 module purge
-module load autoload intel-oneapi-compilers/2023.2.1
+module load autoload nvhpc/22.3
 
 export KMP_AFFINITY=compact
 # export KMP_AFFINITY=verbose,compact

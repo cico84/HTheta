@@ -1,6 +1,6 @@
 # Load required modules for compilation
 module purge
-module load autoload intel-oneapi-compilers/2023.2.1
+module load autoload nvhpc/22.3
 
 # Compile code, if necessary
 make clean -f "${HTHETA}/src/makefile.txt"
