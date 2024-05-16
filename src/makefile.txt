@@ -4,7 +4,7 @@ FC     = nvfortran
 OPTS_F = -O3 -acc=multicore -module $(OBJDIR) # -xHost -mcmodel medium -shared-intel -warn all -warn noexternals
 OPTS_OMP =
 
-LIBLIST  = -L${NVHPC_HOME}/Linux_x86_64/22.3/cuda/lib64/ -lnvToolsExt
+LIBLIST  = -L${NVHPC_HOME}/Linux_x86_64/24.3/cuda/lib64/ -lnvToolsExt
 INCLIST  = 
 
 PROG = ${HTHETA}/bin/htheta.exe
