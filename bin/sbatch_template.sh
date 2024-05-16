@@ -11,7 +11,7 @@
 #SBATCH --qos=normal                 # quality of service
 
 module purge
-module load autoload nvhpc/22.3
+module load nvhpc/24.3
 
 export KMP_AFFINITY=compact
 # export KMP_AFFINITY=verbose,compact
