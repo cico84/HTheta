@@ -3,4 +3,5 @@
 *.mod
 inp/params.inp
 bin/htheta.exe
+bin/sbatch.sh
 *.bak
