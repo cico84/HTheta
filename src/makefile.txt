@@ -2,7 +2,7 @@ SRCDIR = ${HTHETA}/src/
 OBJDIR = ${HTHETA}/bin/objects/
 FC     = nvfortran
 OPTS_F = -D$(VERBOSE) -O3 -module $(OBJDIR) # -xHost -mcmodel medium -shared-intel -warn all -warn noexternals
-OPTS_OMP = -Mopenmp
+OPTS_OMP = 
 
 LIBLIST  = 
 INCLIST  = 
