@@ -229,8 +229,10 @@
       !*                                                                            *  
       !******************************************************************************
 
-            call nvtxStartRange('START CODE')
+            call nvtxStartRange('FULL PROGRAM')
 
+            call nvtxStartRange('INPUT READING')
+            
             ! Read input parameters
             call read_input_parameters(out_name, out_path, nthreads)
 
@@ -253,10 +255,14 @@
             ! Number of initial electrons/ions (every particle is a charge per unit surface C/m^2)      
             npinit = nint(yd*n0/w)         
 
+            call nvtxEndRange
+
             !******************************************************************************
 
+            call nvtxStartRange('MESH GENERATION')
             ! Mesh generation
             call mesh
+            call nvtxEndRange
 
             ! Constraint CFL      
             vthe  = dsqrt(8.*kB*Te0/(pi*me))
@@ -305,20 +311,26 @@
             ! ******************************** PIC cycle **********************************
             ! *****************************************************************************
             do ipic = 1, npic
-
+                  
+                  call nvtxStartRange('SCATTER PHASE')
                   ! Weight particles to the nodes of the mesh to obtain the charge density
                   call scatter
+                  call nvtxEndRange
 
                   ! Compute Poisson's equation source term
                   do j = 0, ny
                         dpoi(j) = -(rhoi(j)-rhoe(j)) * dy**2 / eps0
                   end do
             
+                  call nvtxStartRange('FIELD SOLVE')
                   ! Solve for the self-consistent azimuthal electric field
                   call fieldsolve
+                  call nvtxEndRange
 
+                  call nvtxStartRange('PUSH')
                   ! Update macro-particles positions and velocities
                   call push
+                  call nvtxEndRange
 
                   ! Diagnostics: averaged energy and mobility
                   Ee_ave = 0.
