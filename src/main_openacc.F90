@@ -618,7 +618,7 @@
               rhoi(j)=0.
         end do
         
-        !$acc kernels loop
+        !$acc kernels loop reduction(+:rhoe, rhoi)
         ! Electron and ion charge deposition on the mesh points 
         do i = 1, npe     
               ! Charge density weighting (linear weighting, CIC)
