@@ -744,11 +744,10 @@
             use poi
             use part
             use rand
-            use omp_lib
             implicit none
             integer                    :: i,ie,ii,thread_num
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
-            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec
+            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy
             double precision, external :: ran2
 
             ! Leapfrog method (Boris algorithm)
@@ -760,7 +759,8 @@
             ! Electrons loop
             !$acc kernels loop
             do i = 1, npe
-                  Eype(i) = wye(i)*Ey(jpe(i)-1) + (1.-wye(i))*Ey(jpe(i))
+                  wy      = ( y(jpe(i)) - ype(i) ) / dy
+                  Eype(i) = wy*Ey(jpe(i)-1) + (1.-wy)*Ey(jpe(i))
                   ! first half acceleration by electric field
                   vyea = vype(i) - conste*Eype(i)         
                   vzea = vzpe(i) - conste*Ez0
