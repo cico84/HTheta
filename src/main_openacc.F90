@@ -365,7 +365,7 @@
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
 
-                  !$acc exit data delete (  phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
+                  !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
                   !$acc exit data delete (   wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
                   !$acc exit data delete (  vxpe(1:npe), vxpi(1:npi) )
                   !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
