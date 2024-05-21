@@ -338,6 +338,7 @@
                   ! Solve for the self-consistent azimuthal electric field
                   !$acc update host(dpoi)
                   call fieldsolve
+                  !$acc update host(phi, Ey)
                   call nvtxEndRange
 
                   call nvtxStartRange('PUSH')
