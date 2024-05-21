@@ -327,6 +327,12 @@
                         dpoi(j) = -(rhoi(j)-rhoe(j)) * dy**2 / eps0
                   end do
             
+                  !$acc enter data copyin( phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
+                  !$acc enter data copyin(  jpe(1:npe),  wye(1:npe), eype(1:npe) )
+                  !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe), ype(1:npe), zpe(1:npe) )
+                  !$acc enter data copyin(        jpi(1:npi),        wyi(1:npi), eypi(1:npi) )
+                  !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi), ypi(1:npi), zpi(1:npi) )
+
                   call nvtxStartRange('FIELD SOLVE')
                   ! Solve for the self-consistent azimuthal electric field
                   call fieldsolve
@@ -335,10 +341,6 @@
                   call nvtxStartRange('PUSH')
 
                   ! Update macro-particles positions and velocities
-                  !$acc enter data copyin( Ey(0:ny), jpe(1:npe), y(0:ny),  wye(1:npe), eype(1:npe) )
-                  !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe), ype(1:npe), zpe(1:npe) )
-                  !$acc enter data copyin(        jpi(1:npi),        wyi(1:npi), eypi(1:npi) )
-                  !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi), ypi(1:npi), zpi(1:npi) )
                   call push
                   
                   call nvtxEndRange
@@ -361,7 +363,8 @@
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
 
-                  !$acc exit data delete (  Ey(0:ny), y(0:ny), wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
+                  !$acc exit data delete (  phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
+                  !$acc exit data delete (   wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
                   !$acc exit data delete (  vxpe(1:npe), vxpi(1:npi) )
                   !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
                   !$acc exit data copyout(  jpi(1:npi), vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
@@ -708,12 +711,16 @@
             !******************************************************************************
 
             ! Electric field equation solution
+            !$acc update device(phi(0:ny))
+            !$acc parallel loop
             do j=1,ny-1
                   Ey(j)=-(phi(j+1)-phi(j-1))/duedy
             end do
             ! Periodic boundary conditions
+            !$acc serial
             Ey(0) = -(phi(1)-phi(ny-1))/duedy
             Ey(ny)= Ey(0)
+            !$acc end serial
             
             !******************************************************************************
       
