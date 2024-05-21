@@ -312,6 +312,11 @@
             ! *****************************************************************************
             ! ******************************** PIC cycle **********************************
             ! *****************************************************************************
+            !$acc enter data copyin(  vol(0:ny), rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
+            !$acc enter data copyin(  wye(1:npe), eype(1:npe), wyi (1:npi), eypi(1:npi) )
+            !$acc enter data copyin(  jpe(1:npe),  jpi(1:npi) )
+            !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe),  ype(1:npe),  zpe(1:npe) )
+            !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi),  ypi(1:npi),  zpi(1:npi) )
             do ipic = 1, npic
                   
                   call nvtxStartRange('SCATTER PHASE')
@@ -321,12 +326,6 @@
                   call scatter
                   call nvtxEndRange
                   ! Copy data from GPU to CPU memory
-
-                  !$acc enter data copyin( rhoi(0:ny ), rhoe(0:ny ), phi (0:ny ), dpoi(0:ny ), Ey(0:ny), y(0:ny) )
-                  !$acc enter data copyin(  wye(1:npe), eype(1:npe), wyi (1:npi), eypi(1:npi) )
-                  !$acc enter data copyin(  jpe(1:npe),  jpi(1:npi) )
-                  !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe),  ype(1:npe),  zpe(1:npe) )
-                  !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi),  ypi(1:npi),  zpi(1:npi) )
 
                   ! Compute Poisson's equation source term
                   !$acc parallel loop
@@ -338,7 +337,7 @@
                   ! Solve for the self-consistent azimuthal electric field
                   !$acc update host(dpoi)
                   call fieldsolve
-                  !$acc update host(phi, Ey)
+                  !$acc update host(phi(ny/2), Ey(ny/2), rhoe(ny/2), rhoi(ny/2)) async(3)
                   call nvtxEndRange
 
                   call nvtxStartRange('PUSH')
@@ -366,14 +365,9 @@
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
 
-                  !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
-                  !$acc exit data delete (   wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
-                  !$acc exit data delete (  vxpe(1:npe), vxpi(1:npi) )
-                  !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
-                  !$acc exit data copyout(  jpi(1:npi), vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
-
                   if ( mod(ipic,1) .eq. 0 ) then
                         open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
+                        !$acc wait(3)
                         write(11,101) ipic*dt, Ee_ave, Ei_ave, mob, phi(ny/2), Ey(ny/2), rhoe(ny/2)/q, rhoi(ny/2)/q
                         close (11)
                   end if
@@ -382,6 +376,11 @@
             
             ! end of PIC cycle
             end do
+            !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
+            !$acc exit data delete (   wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
+            !$acc exit data delete (  vxpe(1:npe), vxpi(1:npi) )
+            !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
+            !$acc exit data copyout(  jpi(1:npi), vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
 
             !******************************************************************************
             !******************************************************************************
@@ -637,43 +636,48 @@
             integer          :: i,j
       
             ! Charge density initialization to 0
+            !$acc parallel loop
             do j = 0, ny
-                  rhoe(j)=0.
-                  rhoi(j)=0.
+                  rhoe(j) = 0.0d0
+                  rhoi(j) = 0.0d0
             end do
             
-            !$omp parallel default(none) firstprivate(wq) private(i,j) shared(ny, vol, npe, npi,      &
-            !$omp                        wye, wyi, y, dy, ype, jpe, ypi, jpi) reduction(+: rhoe, rhoi)  
-            !$omp do 
             ! Electron charge deposition on the mesh points 
+            !$acc parallel loop
             do i = 1, npe     
                   ! Charge density weighting (linear weighting, CIC)
-                  jpe(i)=int(ype(i)/dy)+1         
-                  wye(i)=(y(jpe(i))-ype(i))/dy     
-                  rhoe(jpe(i)-1)=wye(i)*wq+rhoe(jpe(i)-1)
-                  rhoe(jpe(i))=(1.-wye(i))*wq+rhoe(jpe(i))
+                  jpe (    i   ) = int(ype(i) / dy) + 1         
+                  wye (    i   ) = ( y(jpe(i)) - ype(i) ) / dy
+                  !$acc atomic update
+                  rhoe(jpe(i)-1) = wye(i)*wq + rhoe(jpe(i)-1)
+                  !$acc atomic update
+                  rhoe(jpe(i)  ) = (1.0d0 - wye(i))*wq + rhoe(jpe(i))
             end do
-            !$omp end do
-            !$omp do 
+            
             ! Ion charge deposition on the mesh points 
-            do i=1,npi       
+            !$acc parallel loop
+            do i = 1, npi       
                   ! Charge density weighting (linear weighting, CIC) 
-                  jpi(i)=int(ypi(i)/dy)+1         
-                  wyi(i)=(y(jpi(i))-ypi(i))/dy     
-                  rhoi(jpi(i)-1)=wyi(i)*wq+rhoi(jpi(i)-1)
-                  rhoi(jpi(i))=(1.-wyi(i))*wq+rhoi(jpi(i))                   
+                  jpi (    i   ) = int(ypi(i) / dy) + 1         
+                  wyi (    i   ) = ( y(jpi(i)) - ypi(i) ) / dy
+                  !$acc atomic update   
+                  rhoi(jpi(i)-1) = wyi(i)*wq + rhoi(jpi(i)-1)
+                  !$acc atomic update
+                  rhoi(jpi(i)  ) = (1.0d0 - wyi(i))*wq + rhoi(jpi(i))                   
             end do
-            !$omp end do
-            !$omp end parallel
 
             ! Periodic boundary conditions for both ion and electron charge density
+            !$acc serial
             rhoe(0)  = rhoe(0) + rhoe(ny)   
             rhoe(ny) = rhoe(0)
             rhoi(0)  = rhoi(0) + rhoi(ny)   
-            rhoi(ny) = rhoi(0)      
+            rhoi(ny) = rhoi(0)
+            !$acc end serial
+
+            !$acc parallel loop
             do j = 0, ny
-                  rhoe(j)=rhoe(j)/vol(j)
-                  rhoi(j)=rhoi(j)/vol(j)
+                  rhoe(j) = rhoe(j) / vol(j)
+                  rhoi(j) = rhoi(j) / vol(j)
             end do
 
             return
