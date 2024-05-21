@@ -517,8 +517,7 @@
             deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi)
             
             ! Datasets from 1 to npmax
-            deallocate( ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi, &
-                        Eype, ypi )
+            deallocate( ype, zpe, vxpe, vype, vzpe, Eype, ypi, zpi, vxpi, vypi, vzpi, Eypi )
 
             return
 
@@ -628,7 +627,7 @@
             use poi
             use part
             implicit none
-            integer          :: i,j,jp
+            integer          :: i, j, jp
             double precision :: wy
       
             ! Charge density initialization to 0
