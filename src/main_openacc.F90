@@ -633,7 +633,8 @@
             use poi
             use part
             implicit none
-            integer          :: i,j
+            integer          :: i,j,jp
+            double precision :: wy
       
             ! Charge density initialization to 0
             !$acc parallel loop
@@ -745,7 +746,7 @@
             use part
             use rand
             implicit none
-            integer                    :: i,ie,ii,thread_num
+            integer                    :: i,ie,ii,thread_num,jp
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
             double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy
             double precision, external :: ran2
