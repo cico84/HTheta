@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#SBATCH --reservation=s_tra_hack
 #SBATCH --nodes=1                    # nodes
 #SBATCH --ntasks-per-node=1          # tasks per node
 #SBATCH --cpus-per-task=1            # cores per task
