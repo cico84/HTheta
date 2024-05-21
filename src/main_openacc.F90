@@ -306,6 +306,8 @@
             call init
             
             !******************************************************************************      
+            
+            ! Copy data from CPU to GPU memory
 
             ! *****************************************************************************
             ! ******************************** PIC cycle **********************************
@@ -314,8 +316,11 @@
                   
                   call nvtxStartRange('SCATTER PHASE')
                   ! Weight particles to the nodes of the mesh to obtain the charge density
+                  
+                  ! Copy data from CPU to GPU memory
                   call scatter
                   call nvtxEndRange
+                  ! Copy data from GPU to CPU memory
 
                   ! Compute Poisson's equation source term
                   do j = 0, ny
@@ -354,7 +359,7 @@
                         close (11)
                   end if
             
-      101  format (8(2x,1pg13.5e3))
+101         format (8(2x,1pg13.5e3))
             
             ! end of PIC cycle
             end do
@@ -725,6 +730,11 @@
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
             ! Electrons loop
+            !$acc enter data copyin( Ey(:), jpe(1:npe), y(:),  wye(1:npe),eype(1:npe) )
+            !$acc enter data copyin( vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
+            !$acc enter data copyin(        jpi(1:npi),        wyi(1:npi),eypi(1:npi) )
+            !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
+
             !$acc kernels loop
             do i = 1, npe
                   Eype(i) = wye(i)*Ey(jpe(i)-1) + (1.-wye(i))*Ey(jpe(i))
@@ -809,6 +819,9 @@
                   !         vzpi(i)=vmod*DSIN(ang)
                   !   end if
             end do
+            !$acc exit data delete (  Ey(:), y(:), wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
+            !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
+            !$acc exit data copyout(  jpi(1:npi), vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
 
             !******************************************************************************
             !******************************************************************************        
