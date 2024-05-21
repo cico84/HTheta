@@ -322,11 +322,11 @@
                   call nvtxEndRange
                   ! Copy data from GPU to CPU memory
 
-                  !$acc enter data copyin( rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
-                  !$acc enter data copyin(  jpe(1:npe),  wye(1:npe), eype(1:npe) )
-                  !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe), ype(1:npe), zpe(1:npe) )
-                  !$acc enter data copyin(        jpi(1:npi),        wyi(1:npi), eypi(1:npi) )
-                  !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi), ypi(1:npi), zpi(1:npi) )
+                  !$acc enter data copyin( rhoi(0:ny ), rhoe(0:ny ), phi (0:ny ), dpoi(0:ny ), Ey(0:ny), y(0:ny) )
+                  !$acc enter data copyin(  wye(1:npe), eype(1:npe), wyi (1:npi), eypi(1:npi) )
+                  !$acc enter data copyin(  jpe(1:npe),  jpi(1:npi) )
+                  !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe),  ype(1:npe),  zpe(1:npe) )
+                  !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi),  ypi(1:npi),  zpi(1:npi) )
 
                   ! Compute Poisson's equation source term
                   !$acc parallel loop
