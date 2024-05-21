@@ -364,7 +364,7 @@
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
 
-                  if ( mod(ipic,1) .eq. 0 ) then
+                  if ( mod(ipic,npic) .eq. 0 ) then
                         open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
                         !$acc wait(3)
                         write(11,101) ipic*dt, Ee_ave, Ei_ave, mob, phi(ny/2), Ey(ny/2), rhoe(ny/2)/q, rhoi(ny/2)/q
