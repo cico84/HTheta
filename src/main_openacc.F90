@@ -645,7 +645,7 @@
                   jp             = int(ype(i) / dy) + 1         
                   wy             = ( y(jp) - ype(i) ) / dy
                   !$acc atomic update
-                  rhoe(jp-1) = wye(i)*wq + rhoe(jp-1)
+                  rhoe(jp-1) = wy*wq + rhoe(jp-1)
                   !$acc atomic update
                   rhoe(jp  ) = (1.0d0 - wy )*wq + rhoe(jp)
             end do
@@ -657,7 +657,7 @@
                   jp             = int(ypi(i) / dy) + 1         
                   wy             = ( y(jp) - ypi(i) ) / dy
                   !$acc atomic update   
-                  rhoi(jp-1) = wyi(i)*wq + rhoi(jp-1)
+                  rhoi(jp-1) = wy*wq + rhoi(jp-1)
                   !$acc atomic update
                   rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)                   
             end do
