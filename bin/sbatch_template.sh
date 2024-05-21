@@ -1,6 +1,5 @@
 #!/bin/bash
 
-#SBATCH --reservation=s_tra_hack
 #SBATCH --nodes=1                    # nodes
 #SBATCH --ntasks-per-node=1          # tasks per node
 #SBATCH --cpus-per-task=1            # cores per task
@@ -9,6 +8,7 @@
 #SBATCH --time=24:00:00              # time limit (d-hh:mm:ss)
 #SBATCH --account=tra24_openhack     # account ($ saldo -b)
 #SBATCH --partition=boost_usr_prod   # partition name
+#SBATCH --reservation=s_tra_hack
 #SBATCH --qos=normal                 # quality of service
 
 module load nvhpc/24.3
