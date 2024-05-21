@@ -376,10 +376,10 @@
             ! end of PIC cycle
             end do
             !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
-            !$acc exit data delete (   wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
+            !$acc exit data delete (  eype(1:npe), eypi(1:npi) )
             !$acc exit data delete (  vxpe(1:npe), vxpi(1:npi) )
-            !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
-            !$acc exit data copyout(  jpi(1:npi), vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
+            !$acc exit data copyout(  vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
+            !$acc exit data copyout(  vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
 
             !******************************************************************************
             !******************************************************************************
