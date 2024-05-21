@@ -646,24 +646,24 @@
             !$acc parallel loop
             do i = 1, npe     
                   ! Charge density weighting (linear weighting, CIC)
-                  jpe (    i   ) = int(ype(i) / dy) + 1         
-                  wye (    i   ) = ( y(jpe(i)) - ype(i) ) / dy
+                  jp             = int(ype(i) / dy) + 1         
+                  wy             = ( y(jp) - ype(i) ) / dy
                   !$acc atomic update
-                  rhoe(jpe(i)-1) = wye(i)*wq + rhoe(jpe(i)-1)
+                  rhoe(jp-1) = wye(i)*wq + rhoe(jp-1)
                   !$acc atomic update
-                  rhoe(jpe(i)  ) = (1.0d0 - wye(i))*wq + rhoe(jpe(i))
+                  rhoe(jp  ) = (1.0d0 - wy )*wq + rhoe(jp)
             end do
             
             ! Ion charge deposition on the mesh points 
             !$acc parallel loop
             do i = 1, npi       
                   ! Charge density weighting (linear weighting, CIC) 
-                  jpi (    i   ) = int(ypi(i) / dy) + 1         
-                  wyi (    i   ) = ( y(jpi(i)) - ypi(i) ) / dy
+                  jp             = int(ypi(i) / dy) + 1         
+                  wy             = ( y(jp) - ypi(i) ) / dy
                   !$acc atomic update   
-                  rhoi(jpi(i)-1) = wyi(i)*wq + rhoi(jpi(i)-1)
+                  rhoi(jp-1) = wyi(i)*wq + rhoi(jp-1)
                   !$acc atomic update
-                  rhoi(jpi(i)  ) = (1.0d0 - wyi(i))*wq + rhoi(jpi(i))                   
+                  rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)                   
             end do
 
             ! Periodic boundary conditions for both ion and electron charge density
@@ -759,8 +759,9 @@
             ! Electrons loop
             !$acc kernels loop
             do i = 1, npe
-                  wy      = ( y(jpe(i)) - ype(i) ) / dy
-                  Eype(i) = wy*Ey(jpe(i)-1) + (1.-wy)*Ey(jpe(i))
+                  jp      = int(ype(i) / dy) + 1     
+                  wy      = ( y(jp) - ype(i) ) / dy
+                  Eype(i) = wy*Ey(jp-1) + (1.-wy)*Ey(jp)
                   ! first half acceleration by electric field
                   vyea = vype(i) - conste*Eype(i)         
                   vzea = vzpe(i) - conste*Ez0
@@ -808,7 +809,9 @@
             ! Ions loop
             !$acc kernels loop
             do i = 1, npi
-                  Eypi(i) = wyi (i) * Ey(jpi(i) - 1) + (1. - wyi(i)) * Ey(jpi(i))
+                  jp      = int(ypi(i) / dy) + 1     
+                  wy      = ( y(jp) - ypi(i) ) / dy
+                  Eypi(i) = wy * Ey(jp - 1) + (1. - wy) * Ey(jp)
                   vypi(i) = vypi(i) + consti*Eypi(i)
                   vzpi(i) = vzpi(i) + consti*Ez0
                   ypi(i)  = ypi (i) + vypi(i)*dt
