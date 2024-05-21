@@ -333,25 +333,38 @@
                   call nvtxEndRange
 
                   call nvtxStartRange('PUSH')
+
                   ! Update macro-particles positions and velocities
+                  !$acc enter data copyin( Ey(0:ny), jpe(1:npe), y(0:ny),  wye(1:npe), eype(1:npe) )
+                  !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe), ype(1:npe), zpe(1:npe) )
+                  !$acc enter data copyin(        jpi(1:npi),        wyi(1:npi), eypi(1:npi) )
+                  !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi), ypi(1:npi), zpi(1:npi) )
                   call push
+                  
                   call nvtxEndRange
 
                   ! Diagnostics: averaged energy and mobility
                   Ee_ave = 0.
                   Ei_ave = 0.
                   mob    = 0.
+                  ! "Reduction" copies automatically the results on the host
+                  !$acc parallel loop reduction(+: Ee_ave, mob)
                   do i = 1, npe
                         Ee_ave = Ee_ave + (vxpe(i)**2+vype(i)**2+vzpe(i)**2)
                         mob    = mob + vzpe(i)
                   end do
                   Ee_ave = Ee_ave*JtoeV*0.5*me/npe
                   mob    = mob/(npe*Ez0)
-            
+                  !$acc parallel loop reduction(+: Ei_ave     )
                   do i = 1, npi
                         Ei_ave = Ei_ave + (vxpi(i)**2+vypi(i)**2+vzpi(i)**2)
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
+
+                  !$acc exit data delete (  Ey(0:ny), y(0:ny), wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
+                  !$acc exit data delete (  vxpe(1:npe), vxpi(1:npi) )
+                  !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
+                  !$acc exit data copyout(  jpi(1:npi), vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
 
                   if ( mod(ipic,1) .eq. 0 ) then
                         open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
@@ -730,10 +743,7 @@
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
             ! Electrons loop
-            !$acc enter data copyin( Ey(:), jpe(1:npe), y(:),  wye(1:npe),eype(1:npe) )
-            !$acc enter data copyin( vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
-            !$acc enter data copyin(        jpi(1:npi),        wyi(1:npi),eypi(1:npi) )
-            !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
+
 
             !$acc kernels loop
             do i = 1, npe
@@ -819,9 +829,6 @@
                   !         vzpi(i)=vmod*DSIN(ang)
                   !   end if
             end do
-            !$acc exit data delete (  Ey(:), y(:), wye(1:npe), wyi (1:npi), eype(1:npe), eypi(1:npi) )
-            !$acc exit data copyout(  jpe(1:npe), vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
-            !$acc exit data copyout(  jpi(1:npi), vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
 
             !******************************************************************************
             !******************************************************************************        
