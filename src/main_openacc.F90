@@ -712,15 +712,16 @@
 
             ! Electric field equation solution
             !$acc update device(phi(0:ny))
-            !$acc parallel loop
+            !$acc parallel loop async(1)
             do j=1,ny-1
                   Ey(j)=-(phi(j+1)-phi(j-1))/duedy
             end do
             ! Periodic boundary conditions
-            !$acc serial
+            !$acc serial async(2)
             Ey(0) = -(phi(1)-phi(ny-1))/duedy
             Ey(ny)= Ey(0)
             !$acc end serial
+            !$acc wait
             
             !******************************************************************************
       
