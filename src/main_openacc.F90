@@ -178,9 +178,9 @@
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:) :: ypi, zpi, vxpi, vypi, vzpi
-            double precision, allocatable, dimension(:) :: wye, Eype, wyi, Eypi
+            double precision, allocatable, dimension(:) :: Eype, Eypi !, wyi, wye 
             double precision                            :: vxpeprox, vxpiprox
-            integer         , allocatable, dimension(:) :: jpe, jpi
+            !integer         , allocatable, dimension(:) :: jpe, jpi
       end module part
 
       module diagn
@@ -313,8 +313,7 @@
             ! ******************************** PIC cycle **********************************
             ! *****************************************************************************
             !$acc enter data copyin(  vol(0:ny), rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
-            !$acc enter data copyin(  wye(1:npe), eype(1:npe), wyi (1:npi), eypi(1:npi) )
-            !$acc enter data copyin(  jpe(1:npe),  jpi(1:npi) )
+            !$acc enter data copyin(  eype(1:npe), eypi(1:npi) )
             !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe),  ype(1:npe),  zpe(1:npe) )
             !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi),  ypi(1:npi),  zpi(1:npi) )
             do ipic = 1, npic
@@ -494,12 +493,8 @@
             allocate( vxpi(1:npmax) ) 
             allocate( vypi(1:npmax) ) 
             allocate( vzpi(1:npmax) ) 
-            allocate(  wye(1:npmax) )
             allocate( Eype(1:npmax) )
-            allocate(  wyi(1:npmax) )
             allocate( Eypi(1:npmax) )
-            allocate(  jpe(1:npmax) )
-            allocate(  jpi(1:npmax) )
 
             return
 
@@ -522,8 +517,8 @@
             deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi)
             
             ! Datasets from 1 to npmax
-            deallocate(  ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi, &
-                         wye, Eype, wyi, Eypi, jpe, jpi)
+            deallocate( ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi, &
+                        Eype, ypi )
 
             return
 
