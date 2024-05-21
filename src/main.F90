@@ -754,32 +754,32 @@
                   zpe(i)=zpe(i)+vzpe(i)*dt
                   ! Periodic boundary conditions
                   if (ype(i).le.y(0)) then
-                  ype(i)=y(ny)+ype(i)
+                        ype(i)=y(ny)+ype(i)
                   else if (ype(i).ge.y(ny)) then
-                  ype(i)=ype(i)-y(ny)
+                        ype(i)=ype(i)-y(ny)
                   end if
-                  ! Refresh particles
-                  if ((zch-zpe(i)).ge.zacc) then
-                        ie=ie+1
-                        zpe(i)=zch
-                        ! Full-Maxwellian distribution (Box-Muller transformation)         
-                        rs1=ran2(iseed)
-                        vmod=DSQRT(duekteme*DLOG(rs1))
-                        rs2=ran2(iseed)
-                        ang=duepi*rs2
-                        if ((MOD(ie+1,2)).eq.(MOD(2,2))) then         
-                              vxpe(i)=vmod*DCOS(ang)
-                              vxpeprox=vmod*DSIN(ang)
-                        else
-                              vxpe(i)=vxpeprox
-                        end if
-                        rs1=ran2(iseed)
-                        vmod=DSQRT(duekteme*DLOG(rs1))
-                        rs2=ran2(iseed)
-                        ang=duepi*rs2
-                        vype(i)=vmod*DCOS(ang) 
-                        vzpe(i)=vmod*DSIN(ang)
-                  end if
+                  ! ! Refresh particles
+                  ! if ((zch-zpe(i)).ge.zacc) then
+                  !       ie=ie+1
+                  !       zpe(i)=zch
+                  !       ! Full-Maxwellian distribution (Box-Muller transformation)         
+                  !       rs1=ran2(iseed)
+                  !       vmod=DSQRT(duekteme*DLOG(rs1))
+                  !       rs2=ran2(iseed)
+                  !       ang=duepi*rs2
+                  !       if ((MOD(ie+1,2)).eq.(MOD(2,2))) then         
+                  !             vxpe(i)=vmod*DCOS(ang)
+                  !             vxpeprox=vmod*DSIN(ang)
+                  !       else
+                  !             vxpe(i)=vxpeprox
+                  !       end if
+                  !       rs1=ran2(iseed)
+                  !       vmod=DSQRT(duekteme*DLOG(rs1))
+                  !       rs2=ran2(iseed)
+                  !       ang=duepi*rs2
+                  !       vype(i)=vmod*DCOS(ang) 
+                  !       vzpe(i)=vmod*DSIN(ang)
+                  ! end if
             end do
             !$omp end do
 
@@ -797,28 +797,28 @@
                   else if (ypi(i).ge.y(ny)) then
                         ypi(i)=ypi(i)-y(ny)
                   end if
-                  ! Refresh particles
-                  if (zpi(i).ge.zch) then
-                        ii=ii+1
-                        zpi(i)=zch-zacc
-                        ! Full-Maxwellian distribution (Box-Muller transformation)         
-                        rs1=ran2(iseed)
-                        vmod=DSQRT(duektimi*DLOG(rs1))
-                        rs2=ran2(iseed)
-                        ang=duepi*rs2
-                        if ((MOD(ii+1,2)).eq.(MOD(2,2))) then         
-                              vxpi(i)=vmod*DCOS(ang)
-                              vxpiprox=vmod*DSIN(ang)
-                        else
-                              vxpi(i)=vxpiprox
-                        end if
-                        rs1=ran2(iseed)
-                        vmod=DSQRT(duektimi*DLOG(rs1))
-                        rs2=ran2(iseed)
-                        ang=duepi*rs2       
-                        vypi(i)=vmod*DCOS(ang) 
-                        vzpi(i)=vmod*DSIN(ang)
-                  end if
+                  ! ! Refresh particles
+                  ! if (zpi(i).ge.zch) then
+                  !       ii=ii+1
+                  !       zpi(i)=zch-zacc
+                  !       ! Full-Maxwellian distribution (Box-Muller transformation)         
+                  !       rs1=ran2(iseed)
+                  !       vmod=DSQRT(duektimi*DLOG(rs1))
+                  !       rs2=ran2(iseed)
+                  !       ang=duepi*rs2
+                  !       if ((MOD(ii+1,2)).eq.(MOD(2,2))) then         
+                  !             vxpi(i)=vmod*DCOS(ang)
+                  !             vxpiprox=vmod*DSIN(ang)
+                  !       else
+                  !             vxpi(i)=vxpiprox
+                  !       end if
+                  !       rs1=ran2(iseed)
+                  !       vmod=DSQRT(duektimi*DLOG(rs1))
+                  !       rs2=ran2(iseed)
+                  !       ang=duepi*rs2       
+                  !       vypi(i)=vmod*DCOS(ang) 
+                  !       vzpi(i)=vmod*DSIN(ang)
+                  ! end if
             end do
             !$omp end do
             !$omp end parallel
