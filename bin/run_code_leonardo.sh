@@ -1,5 +1,5 @@
 # Load required modules for compilation
-module load nvhpc/24.3
+module load intel-oneapi-compilers/2023.2.1
 
 # Compile code, if necessary
 make clean -f "${HTHETA}/src/makefile.txt"
