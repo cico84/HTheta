@@ -289,7 +289,7 @@
             write (3,*) 'vthe,vde,vzi=',vthe,vthetae,vzi
             write (3,*) '# part,ppc=  ',npinit,float(npinit)/float(ny-1)
             write (3,*) 'Total particle size [MB] treated by the PUSH function', &
-                        1d-6*(10 * npinit * 8 + 2 * (ny+1) * 8)
+                        1d-6*(10d0 * float(npinit) * 8d0 + 2d0 * float(ny+1) * 8d0 )
             close (3)      
             
             !******************************************************************************
