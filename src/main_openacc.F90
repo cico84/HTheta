@@ -431,6 +431,9 @@
 
             write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t0
             write(12,'(1A30,1E10.3)') " Average PIC cycle time   [s]:", time_pic_cycle
+
+            close (11)
+            close (12)
                         
       end program
 

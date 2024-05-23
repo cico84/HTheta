@@ -402,9 +402,6 @@
             !******************************************************************************
             !******************************************************************************
 
-            close (11)
-            close (12)
-
             call deallocate_fields()
 
             call nvtxEndRange
@@ -413,6 +410,9 @@
             call cpu_time(t5)
             write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t00
             write(12,'(1A30,1E10.3)') " Average PIC cycle time   [s]:", time_pic_cycle
+
+            close (11)
+            close (12)
                         
       end program
 
