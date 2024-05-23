@@ -962,6 +962,7 @@
             ! ---------------------------------------------- INTERNAL VARIABLES --------------------------------------------------
             integer*8                                    :: i, seed
             real*8                                       :: ran_num
+            real*8, external                             :: ran2
             ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE -------------------------------------------
             seed      = - seedNum0      ! Must be negative
             ! First thread uses the global simulation seed
