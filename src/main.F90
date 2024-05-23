@@ -189,8 +189,8 @@
             character(len=100) :: out_name  ! Name of output files related to this simulation (INPUT)
             character(len=100) :: out_path
             double precision   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
-            double precision   :: time_ini, time_push, time_poisson, time_scatter, time_othr
-            double precision   :: t0, t1, t2, t3, t4, t5
+            double precision   :: time_ini, time_push, time_poisson, time_scatter, time_othr, time_pic_cycle
+            double precision   :: t00, t0, t1, t2, t3, t4, t5
             integer            :: npinit, nthreads
       end module diagn
 
@@ -230,7 +230,7 @@
       !*                       INITIALIZATION       PHASE                           *
       !*                                                                            *  
       !******************************************************************************
-            call cpu_time(t0)
+            call cpu_time(t00)
 
             ! Initialize computation times
             time_ini     = 0.0d0
@@ -318,7 +318,7 @@
             call init
             
             call cpu_time(t1)
-            time_ini = t1 - t0
+            time_ini = t1 - t00
 
             !******************************************************************************      
             open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
@@ -391,6 +391,9 @@
                         write(12,102) time_scatter, time_poisson, time_push, time_othr
                   end if
 
+                  call cpu_time(t5)
+                  time_pic_cycle = time_pic_cycle + (t5 - t0)
+
             ! end of PIC cycle
             end do
 
@@ -406,8 +409,10 @@
 
             call nvtxEndRange
 
+            time_pic_cycle = time_pic_cycle / npic
             call cpu_time(t5)
-            write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t0
+            write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t00
+            write(12,'(1A30,1E10.3)') " Average PIC cycle time   [s]:", time_pic_cycle
                         
       end program
 
