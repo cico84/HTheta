@@ -188,8 +188,10 @@
             save
             character(len=100) :: out_name  ! Name of output files related to this simulation (INPUT)
             character(len=100) :: out_path
-            double precision   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
             integer            :: npinit, nthreads
+            double precision   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
+            double precision   :: time_ini, time_push, time_poisson, time_scatter, time_othr
+            double precision   :: t0, t1, t2, t3, t4, t5
       end module diagn
 
       module rand
@@ -228,6 +230,14 @@
       !*                       INITIALIZATION       PHASE                           *
       !*                                                                            *  
       !******************************************************************************
+            call cpu_time(t0)
+
+            ! Initialize computation times
+            time_ini     = 0.0d0
+            time_push    = 0.0d0 
+            time_poisson = 0.0d0 
+            time_scatter = 0.0d0 
+            time_othr    = 0.0d0
 
             call nvtxStartRange('FULL PROGRAM')
 
@@ -238,9 +248,6 @@
 
             ! Allocate data vectors
             call allocate_fields()
-
-            ! Set number of active Open MP threads
-            call omp_set_num_threads(nthreads)
 
             ! Plasma parameters estimations
             ! Debye length
@@ -304,6 +311,16 @@
 
             ! Initial particle distribution
             call init
+
+            call cpu_time(t1)
+            time_ini = t1 - t0
+
+            !******************************************************************************      
+            open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
+            open (12,file=trim(out_path)//'/'//trim(out_name)//'_cpu_times.out',status='unknown',position='append')
+
+            write(12,'(1A25,1E10.3)') " Initialization time [s]:", time_ini
+            write(12,'(1A60)') "  SCATTER [s]    POISSON [s]     PUSH [s]        OTHR [s]   "
             
             !******************************************************************************      
             
@@ -318,6 +335,14 @@
             !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi),  ypi(1:npi),  zpi(1:npi) )
             do ipic = 1, npic
                   
+                  call cpu_time(t0)
+                  
+                  ! Initialize computation times within the PIC cycle
+                  time_scatter = 0.0d0 
+                  time_poisson = 0.0d0 
+                  time_push    = 0.0d0 
+                  time_othr    = 0.0d0
+
                   call nvtxStartRange('SCATTER PHASE')
                   ! Weight particles to the nodes of the mesh to obtain the charge density
                   
@@ -325,6 +350,9 @@
                   call scatter
                   call nvtxEndRange
                   ! Copy data from GPU to CPU memory
+
+                  call cpu_time(t1)
+                  time_scatter = t1 - t0
 
                   ! Compute Poisson's equation source term
                   !$acc parallel loop
@@ -339,12 +367,16 @@
                   !$acc update host(phi(ny/2), Ey(ny/2), rhoe(ny/2), rhoi(ny/2)) async(3)
                   call nvtxEndRange
 
-                  call nvtxStartRange('PUSH')
+                  call cpu_time(t2)
+                  time_poisson = t2 - t1
 
+                  call nvtxStartRange('PUSH')
                   ! Update macro-particles positions and velocities
                   call push
-                  
                   call nvtxEndRange
+
+                  call cpu_time(t3)
+                  time_push = t3 - t2
 
                   ! Diagnostics: averaged energy and mobility
                   Ee_ave = 0.
@@ -364,11 +396,13 @@
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
 
-                  if ( mod(ipic,npic) .eq. 0 ) then
-                        open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
+                  call cpu_time(t4)
+                  time_othr= t4 - t3
+
+                  if ( mod(ipic,1) .eq. 0 ) then
                         !$acc wait(3)
                         write(11,101) ipic*dt, Ee_ave, Ei_ave, mob, phi(ny/2), Ey(ny/2), rhoe(ny/2)/q, rhoi(ny/2)/q
-                        close (11)
+                        write(12,102) time_scatter, time_poisson, time_push, time_othr
                   end if
             
 101         format (8(2x,1pg13.5e3))
@@ -390,6 +424,8 @@
                         
       end program
 
+      call cpu_time(t5)
+      write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t0
 
       !******************************************************************************
       !******************************************************************************
