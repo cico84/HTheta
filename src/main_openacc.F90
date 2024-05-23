@@ -406,6 +406,7 @@
                   end if
             
 101         format (8(2x,1pg13.5e3))
+102         format (4(2x,1e12.3,1x))
             
             ! end of PIC cycle
             end do
