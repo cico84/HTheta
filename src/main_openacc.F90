@@ -282,6 +282,10 @@
             write (3,*) 'CFLe=  	 ',CFLe1,CFLe2
             write (3,*) 'vthe,vde,vzi=',vthe,vthetae,vzi
             write (3,*) '# part,ppc=  ',npinit,float(npinit)/float(ny-1)
+
+            write (3,*) 'Total particle size [MB] treated by the PUSH function', &
+                        1d-6*(10 * npinit * 8 + 2 * (ny+1) * 8)
+
             close (3)      
             
             !******************************************************************************
