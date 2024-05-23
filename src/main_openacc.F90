@@ -979,7 +979,7 @@
             integer*8, dimension(nthreads), intent(out)  :: seeds       ! Initial seeds for the parallel threads
             ! ---------------------------------------------- INTERNAL VARIABLES --------------------------------------------------
             integer*8                                    :: i, seed
-            real*4                                       :: ran_num
+            real*8                                       :: ran_num
             ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE -------------------------------------------
             seed      = - seedNum0      ! Must be negative
             ! First thread uses the global simulation seed
