@@ -421,11 +421,11 @@
             call deallocate_fields()
 
             call nvtxEndRange
+
+            call cpu_time(t5)
+            write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t0
                         
       end program
-
-      call cpu_time(t5)
-      write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t0
 
       !******************************************************************************
       !******************************************************************************
