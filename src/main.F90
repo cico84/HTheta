@@ -191,7 +191,11 @@
             character(len=100) :: out_path
             double precision   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
             double precision   :: time_ini, time_push, time_poisson, time_scatter, time_othr, time_pic_cycle
-            double precision   :: t00, t0, t1, t2, t3, t4, t5
+
+            integer(8)         :: nticks_sec
+            integer(8)         :: nticks_max
+            integer(8)         :: t00, t0, t1, t2, t3, t4, t5
+
             integer            :: npinit, nthreads
       end module diagn
 
@@ -231,7 +235,10 @@
       !*                       INITIALIZATION       PHASE                           *
       !*                                                                            *  
       !******************************************************************************
-            call cpu_time(t00)
+
+            call system_clock(COUNT_RATE = nticks_sec, COUNT_MAX = nticks_max)
+
+            call system_clock(t00)
 
             ! Initialize computation times
             time_ini     = 0.0d0
@@ -320,8 +327,8 @@
             ! Initial particle distribution
             call init
             
-            call cpu_time(t1)
-            time_ini = t1 - t00
+            call system_clock(t1)
+            time_ini = dble(t1 - t00) / dble(nticks_sec)
 
             !******************************************************************************      
             open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
@@ -334,7 +341,7 @@
             ! *****************************************************************************
             do ipic = 1, npic
 
-                  call cpu_time(t0)
+                  call system_clock(t0)
                   
                   ! Initialize computation times within the PIC cycle
                   time_scatter = 0.0d0 
@@ -347,8 +354,8 @@
                   call scatter
                   !call nvtxEndRange
 
-                  call cpu_time(t1)
-                  time_scatter = t1 - t0
+                  call system_clock(t1)
+                  time_scatter = dble(t1 - t0) / dble(nticks_sec)
 
                   ! Compute Poisson's equation source term
                   do j = 0, ny
@@ -359,16 +366,15 @@
                   ! Solve for the self-consistent azimuthal electric field
                   call fieldsolve
                   !call nvtxEndRange
-
-                  call cpu_time(t2)
-                  time_poisson = t2 - t1
+                  call system_clock(t2)
+                  time_poisson = dble(t2 - t1) / dble(nticks_sec)
 
                   !call nvtxStartRange('PUSH')
                   ! Update macro-particles positions and velocities
                   call push
                   !call nvtxEndRange
-                  call cpu_time(t3)
-                  time_push = t3 - t2
+                  call system_clock(t3)
+                  time_push = dble(t3 - t2) / dble(nticks_sec)
 
                   ! Diagnostics: averaged energy and mobility
                   Ee_ave = 0.
@@ -386,16 +392,16 @@
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
 
-                  call cpu_time(t4)
-                  time_othr= t4 - t3
+                  call system_clock(t4)
+                  time_othr = dble(t4 - t3) / dble(nticks_sec)
 
                   if ( mod(ipic,1) .eq. 0 ) then
                         write(11,101) ipic*dt, Ee_ave, Ei_ave, mob, phi(ny/2), Ey(ny/2), rhoe(ny/2)/q, rhoi(ny/2)/q
                         write(12,102) time_scatter, time_poisson, time_push, time_othr
                   end if
 
-                  call cpu_time(t5)
-                  time_pic_cycle = time_pic_cycle + (t5 - t0)
+                  call system_clock(t5)
+                  time_pic_cycle = time_pic_cycle + dble(t5 - t0) / dble(nticks_sec)
 
             ! end of PIC cycle
             end do
