@@ -42,7 +42,6 @@
 ! phi (j)        = Electric potential at grid node "j"
 ! apoi,bpoi,cpoi -> Poisson's equation discretization coefficients in Cartesian topology  
 ! Ey  (j)        = Azimuthal electric field at grid point "j"
-! Eype(i)        = Azimuthal electric field at macro-particle position
 
 !******************************************************************************
 !*                             DEFINITION     PHASE                           *
@@ -815,14 +814,14 @@
                   vype(i) = vyec - conste*Eyp               
                   vzpe(i) = vzec - conste*Ez0
                   ! Coordinates updates (cartesian approximation)
-                  !ype (i) = ype(i) + vype(i)*dt
-                  !zpe (i) = zpe(i) + vzpe(i)*dt
+                  ype (i) = ype(i) + vype(i)*dt
+                  zpe (i) = zpe(i) + vzpe(i)*dt
                   ! Periodic boundary conditions
-                  !if      ( ype(i) .le. y_min  ) then
-                  !      ype(i) = y_max  + ype(i)
-                  !else if (ype(i)  .ge. y_max ) then
-                  !      ype(i) = ype(i) -  y_max
-                  !end if
+                  if      ( ype(i) .le. y_min  ) then
+                        ype(i) = y_max  + ype(i)
+                  else if (ype(i)  .ge. y_max ) then
+                        ype(i) = ype(i) -  y_max
+                  end if
                   ! ! Refresh particles
                   ! if ((zch-zpe(i)).ge.zacc) then
                   !       ie=ie+1
@@ -859,15 +858,16 @@
 
                   vypi(i)    = vypi(i) + consti*Eyp
                   vzpi(i)    = vzpi(i) + consti*Ez0
-                  !ypi(i)     = ypi (i) + vypi(i)*dt
-                  !zpi(i)     = zpi (i) + vzpi(i)*dt
+                  ypi(i)     = ypi (i) + vypi(i)*dt
+                  zpi(i)     = zpi (i) + vzpi(i)*dt
 
                   ! Periodic boundary conditions
-                  !if      ( ypi(i) .lt. y_min ) then
-                  !      ypi(i) = y_max  + ypi(i)
-                  !else if ( ypi(i) .ge. y_max ) then
-                  !      ypi(i) = ypi(i) -  y_max
-                  !end if
+                  if      ( ypi(i) .lt. y_min ) then
+                        ypi(i) = y_max  + ypi(i)
+                  else if ( ypi(i) .ge. y_max ) then
+                        ypi(i) = ypi(i) -  y_max
+                  end if
+
                   ! ! Refresh particles
                   ! if (zpi(i).ge.zch) then
                   !       ii=ii+1

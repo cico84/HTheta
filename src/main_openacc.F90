@@ -42,7 +42,6 @@
 ! phi (j)        = Electric potential at grid node "j"
 ! apoi,bpoi,cpoi -> Poisson's equation discretization coefficients in Cartesian topology  
 ! Ey  (j)        = Azimuthal electric field at grid point "j"
-! Eype(i)        = Azimuthal electric field at macro-particle position
 
 !******************************************************************************
 !*                             DEFINITION     PHASE                           *
@@ -178,9 +177,7 @@
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:) :: ypi, zpi, vxpi, vypi, vzpi
-            double precision, allocatable, dimension(:) :: Eype, Eypi !, wyi, wye 
             double precision                            :: vxpeprox, vxpiprox
-            !integer         , allocatable, dimension(:) :: jpe, jpi
       end module part
 
       module diagn
@@ -191,7 +188,9 @@
             integer            :: npinit, nthreads
             double precision   :: mob, Ee_ave, Ei_ave, Debye, omegae, omegace, vthetae, vzi, vthe, CFLe1, CFLe2
             double precision   :: time_ini, time_push, time_poisson, time_scatter, time_othr, time_pic_cycle
-            double precision   :: t00, t0, t1, t2, t3, t4, t5
+            integer(8)         :: nticks_sec
+            integer(8)         :: nticks_max
+            integer(8)         :: t00, t0, t1, t2, t3, t4, t5
       end module diagn
 
       module rand
@@ -230,7 +229,8 @@
       !*                       INITIALIZATION       PHASE                           *
       !*                                                                            *  
       !******************************************************************************
-            call cpu_time(t00)
+            call system_clock(COUNT_RATE = nticks_sec, COUNT_MAX = nticks_max)
+            call system_clock(t00)
 
             ! Initialize computation times
             time_ini     = 0.0d0
@@ -316,8 +316,8 @@
             ! Initial particle distribution
             call init
 
-            call cpu_time(t1)
-            time_ini = t1 - t00
+            call system_clock(t1)
+            time_ini = dble(t1 - t00) / dble(nticks_sec)
 
             !******************************************************************************      
             open (11,file=trim(out_path)//'/'//trim(out_name)//'_history.out',status='unknown',position='append')
@@ -339,7 +339,7 @@
             !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi),  ypi(1:npi),  zpi(1:npi) )
             do ipic = 1, npic
                   
-                  call cpu_time(t0)
+                  call system_clock(t0)
                   
                   ! Initialize computation times within the PIC cycle
                   time_scatter = 0.0d0 
@@ -355,8 +355,8 @@
                   call nvtxEndRange
                   ! Copy data from GPU to CPU memory
 
-                  call cpu_time(t1)
-                  time_scatter = t1 - t0
+                  call system_clock(t1)
+                  time_scatter = dble(t1 - t0) / dble(nticks_sec)
 
                   ! Compute Poisson's equation source term
                   !$acc parallel loop
@@ -371,16 +371,16 @@
                   !$acc update host(phi(ny/2), Ey(ny/2), rhoe(ny/2), rhoi(ny/2)) async(3)
                   call nvtxEndRange
 
-                  call cpu_time(t2)
-                  time_poisson = t2 - t1
+                  call system_clock(t2)
+                  time_poisson = dble(t2 - t1) / dble(nticks_sec)
 
                   call nvtxStartRange('PUSH')
                   ! Update macro-particles positions and velocities
                   call push
                   call nvtxEndRange
 
-                  call cpu_time(t3)
-                  time_push = t3 - t2
+                  call system_clock(t3)
+                  time_push = dble(t3 - t2) / dble(nticks_sec)
 
                   ! Diagnostics: averaged energy and mobility
                   Ee_ave = 0.
@@ -400,8 +400,8 @@
                   end do
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
 
-                  call cpu_time(t4)
-                  time_othr= t4 - t3
+                  call system_clock(t4)
+                  time_othr = dble(t4 - t3) / dble(nticks_sec)
 
                   if ( mod(ipic,1) .eq. 0 ) then
                         !$acc wait(3)
@@ -409,8 +409,8 @@
                         write(12,102) time_scatter, time_poisson, time_push, time_othr
                   end if
 
-                  call cpu_time(t5)
-                  time_pic_cycle = time_pic_cycle + (t5 - t0)
+                  call system_clock(t5)
+                  time_pic_cycle = time_pic_cycle + dble(t5 - t0) / dble(nticks_sec)
             
 101         format (8(2x,1pg13.5e3))
 102         format (4(2x,1e12.3,1x))
@@ -431,9 +431,9 @@
             call nvtxEndRange
 
             time_pic_cycle = time_pic_cycle/npic
-            call cpu_time(t5)
+            call system_clock(t5)
 
-            write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t0
+            write(12,'(1A30,1E10.3)') " Total computational time [s]:", dble(t5 - t00) / dble(nticks_sec)
             write(12,'(1A30,1E10.3)') " Average PIC cycle time   [s]:", time_pic_cycle
 
             close (11)
@@ -543,8 +543,6 @@
             allocate( vxpi(1:npmax) ) 
             allocate( vypi(1:npmax) ) 
             allocate( vzpi(1:npmax) ) 
-            allocate( Eype(1:npmax) )
-            allocate( Eypi(1:npmax) )
 
             return
 
@@ -567,7 +565,7 @@
             deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi)
             
             ! Datasets from 1 to npmax
-            deallocate( ype, zpe, vxpe, vype, vzpe, Eype, ypi, zpi, vxpi, vypi, vzpi, Eypi )
+            deallocate( ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi )
 
             return
 
@@ -792,7 +790,7 @@
             implicit none
             integer                    :: i,ie,ii,thread_num,jp
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
-            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy
+            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy,Eyp
             double precision, external :: ran2
 
             ! Leapfrog method (Boris algorithm)
@@ -806,9 +804,9 @@
             do i = 1, npe
                   jp      = int(ype(i) / dy) + 1     
                   wy      = ( y(jp) - ype(i) ) / dy
-                  Eype(i) = wy*Ey(jp-1) + (1.-wy)*Ey(jp)
+                  Eyp     = wy*Ey(jp-1) + (1.-wy)*Ey(jp)
                   ! first half acceleration by electric field
-                  vyea = vype(i) - conste*Eype(i)         
+                  vyea = vype(i) - conste*Eyp         
                   vzea = vzpe(i) - conste*Ez0
                   ! Full rotation around magnetic field
                   vyeb = vyea    - vzea*tB
@@ -816,7 +814,7 @@
                   vyec = vyea    - vzeb*tBB
                   vzec = vzea    + vyeb*tBB
                   ! Second half acceleration by electric field  
-                  vype(i) = vyec - conste*Eype(i)                
+                  vype(i) = vyec - conste*Eyp              
                   vzpe(i) = vzec - conste*Ez0
                   ! Coordinates updates (cartesian approximation)
                   ype (i) = ype(i) + vype(i)*dt
@@ -856,8 +854,8 @@
             do i = 1, npi
                   jp      = int(ypi(i) / dy) + 1     
                   wy      = ( y(jp) - ypi(i) ) / dy
-                  Eypi(i) = wy * Ey(jp - 1) + (1. - wy) * Ey(jp)
-                  vypi(i) = vypi(i) + consti*Eypi(i)
+                  Eyp     = wy * Ey(jp - 1) + (1. - wy) * Ey(jp)
+                  vypi(i) = vypi(i) + consti*Eyp
                   vzpi(i) = vzpi(i) + consti*Ez0
                   ypi(i)  = ypi (i) + vypi(i)*dt
                   zpi(i)  = zpi (i) + vzpi(i)*dt
