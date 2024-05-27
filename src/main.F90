@@ -179,9 +179,7 @@
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:) :: ypi, zpi, vxpi, vypi, vzpi
-
             double precision                            :: vxpeprox, vxpiprox
-            integer         , allocatable, dimension(:) :: jpe, jpi
       end module part
 
       module diagn
@@ -535,13 +533,6 @@
             allocate( vxpi(1:npmax) ) 
             allocate( vypi(1:npmax) ) 
             allocate( vzpi(1:npmax) ) 
-            allocate(  wye(1:npmax) )
-            allocate( Eype(1:npmax) )
-            allocate(  wyi(1:npmax) )
-            allocate( Eypi(1:npmax) )
-            allocate(  jpe(1:npmax) )
-            allocate(  jpi(1:npmax) )
-
             return
 
       end subroutine
@@ -560,11 +551,10 @@
             implicit none
 
             ! Datasets from 0 to ny
-            deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi)
+            deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi )
             
             ! Datasets from 1 to npmax
-            deallocate(  ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi, &
-                         wye, Eype, wyi, Eypi, jpe, jpi)
+            deallocate(  ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi )
 
             return
 
