@@ -532,7 +532,8 @@
             allocate(  zpi(1:npmax) ) 
             allocate( vxpi(1:npmax) ) 
             allocate( vypi(1:npmax) ) 
-            allocate( vzpi(1:npmax) ) 
+            allocate( vzpi(1:npmax) )
+            
             return
 
       end subroutine
@@ -783,7 +784,7 @@
             !$omp                             private(thread_num, ie, ii, i, jp, wy, Eyp, vyea, vzea, vyeb, vzeb,      &
             !$omp                                     vyec, vzec, rs1, rs2, ang, vmod, vxpeprox, vxpiprox)             &
             !$omp                              shared(ny, y, Ey, npe, npi, vxpe, vype, vzpe, vxpi, vypi, vzpi, ype,    &
-            !$omp                                     zpe, ypi, zpi, seedNum)
+            !$omp                                     zpe, ypi, zpi, seedNum, dy)
             thread_num  = omp_get_thread_num()
             iseed       = seedNum (thread_num+1)
             ie          = 0
