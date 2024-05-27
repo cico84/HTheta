@@ -688,7 +688,7 @@
             !$omp end do
             !$omp do 
             ! Ion charge deposition on the mesh points 
-            do i=1,npi       
+            do i = 1, npi       
                   ! Charge density weighting (linear weighting, CIC) 
                   jpi(i)=int(ypi(i)/dy)+1         
                   wyi(i)=(y(jpi(i))-ypi(i))/dy     
