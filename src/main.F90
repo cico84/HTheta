@@ -416,7 +416,7 @@
             !call nvtxEndRange
 
             time_pic_cycle = time_pic_cycle / npic
-            call cpu_time(t5)
+            call system_clock(t5)
             write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t00
             write(12,'(1A30,1E10.3)') " Average PIC cycle time   [s]:", time_pic_cycle
 
