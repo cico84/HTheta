@@ -417,7 +417,7 @@
 
             time_pic_cycle = time_pic_cycle / npic
             call system_clock(t5)
-            write(12,'(1A30,1E10.3)') " Total computational time [s]:", t5 - t00
+            write(12,'(1A30,1E10.3)') " Total computational time [s]:",  dble(t5 - t00) / dble(nticks_sec)
             write(12,'(1A30,1E10.3)') " Average PIC cycle time   [s]:", time_pic_cycle
 
             close (11)
