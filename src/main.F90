@@ -381,7 +381,7 @@
                   Ei_ave = 0.
                   mob    = 0.
 
-                  !$omp parallel default(none) firstprivate(npe, npi) private(i) shared(vxpe,vype,vzpe,vxpi,vypi,vzpi) 
+                  !$omp parallel default(none) firstprivate(npe, npi) private(i) shared(vxpe,vype,vzpe,vxpi,vypi,vzpi)  &
                   !$omp                        reduction(+: Ee_ave, Ei_ave, mob)
                   !$omp do
                   do i = 1, npe
@@ -866,7 +866,7 @@
                   vzpi(i)    = vzpi(i) + consti*Ez0
                   ypi(i)     = ypi (i) + vypi(i)*dt
                   zpi(i)     = zpi (i) + vzpi(i)*dt
-                  
+
                   ! Periodic boundary conditions
                   if      ( ypi(i) .lt. y(0) ) then
                         ypi(i) = y(ny) + ypi(i)
