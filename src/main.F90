@@ -772,7 +772,7 @@
             integer                    :: i,ie,ii,thread_num,jp
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
             double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy,Eyp
-            double precision           :: ymin, ymax
+            double precision           :: y_min, y_max
             double precision, external :: ran2
 
             ! Leapfrog method (Boris algorithm)
@@ -780,11 +780,11 @@
             tBB = 2.*tB/(1.+tB**2)
             duekteme = -2.*kB*Te0/me   ! Electrons leap frog constant
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
-            ymin     = y( 0)
-            ymax     = y(ny)
+            y_min    = y( 0)
+            y_max    = y(ny)
 
             !$omp parallel default(none) firstprivate(tB, tBB, duekteme, duektimi, conste, consti, Ez0, dt, zch, zacc, &
-            !$omp                                     ymin, ymax)                                                      &
+            !$omp                                     y_min, y_max)                                                    &
             !$omp                             private(thread_num, ie, ii, i, jp, wy, Eyp, vyea, vzea, vyeb, vzeb,      &
             !$omp                                     vyec, vzec, rs1, rs2, ang, vmod, vxpeprox, vxpiprox)             &
             !$omp                              shared(ny, y, Ey, npe, npi, vxpe, vype, vzpe, vxpi, vypi, vzpi, ype,    &
