@@ -27,4 +27,5 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${NVHPC_HOME}/Linux_x86_64/24.3/cuda/lib
 
 #srun ./htheta.exe
 #srun nvprof -o prof_out ./htheta.exe
+#ncu --set=full -o myreport --import-source=yes --launch-skip=2*5 --launch-count=5 ./htheta.exe
 nsys profile -t cuda,nvtx,openacc ./htheta.exe
