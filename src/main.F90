@@ -179,7 +179,7 @@
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:) :: ypi, zpi, vxpi, vypi, vzpi
-            double precision, allocatable, dimension(:) :: wye, Eype, wyi, Eypi
+
             double precision                            :: vxpeprox, vxpiprox
             integer         , allocatable, dimension(:) :: jpe, jpi
       end module part
@@ -380,17 +380,25 @@
                   Ee_ave = 0.
                   Ei_ave = 0.
                   mob    = 0.
+
+                  !$omp parallel default(none) firstprivate(npe, npi) private(i) shared(vxpe,vype,vzpe,vxpi,vypi,vzpi) 
+                  !$omp                        reduction(+: Ee_ave, Ei_ave, mob)
+                  !$omp do
                   do i = 1, npe
                         Ee_ave = Ee_ave + (vxpe(i)**2+vype(i)**2+vzpe(i)**2)
                         mob    = mob + vzpe(i)
                   end do
-                  Ee_ave = Ee_ave*JtoeV*0.5*me/npe
-                  mob    = mob/(npe*Ez0)
-            
+                  !$omp end do
+                  !$omp do
                   do i = 1, npi
                         Ei_ave = Ei_ave + (vxpi(i)**2+vypi(i)**2+vzpi(i)**2)
                   end do
+                  !$omp end do
+                  !$omp end parallel 
+
+                  Ee_ave = Ee_ave*JtoeV*0.5*me/npe
                   Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
+                  mob    = mob/(npe*Ez0)
 
                   call system_clock(t4)
                   time_othr = dble(t4 - t3) / dble(nticks_sec)
@@ -666,7 +674,8 @@
             use poi
             use part
             implicit none
-            integer          :: i,j
+            integer          :: i,j, jp
+            double precision :: wy
       
             ! Charge density initialization to 0
             do j = 0, ny
@@ -674,26 +683,26 @@
                   rhoi(j)=0.
             end do
             
-            !$omp parallel default(none) firstprivate(wq) private(i,j) shared(ny, vol, npe, npi,      &
-            !$omp                        wye, wyi, y, dy, ype, jpe, ypi, jpi) reduction(+: rhoe, rhoi)  
+            !$omp parallel default(none) firstprivate(wq) private(i, j, wy, jp) shared(ny, vol, npe, npi,     &
+            !$omp                        y, dy, ype, ypi) reduction(+: rhoe, rhoi)  
             !$omp do 
             ! Electron charge deposition on the mesh points 
             do i = 1, npe     
                   ! Charge density weighting (linear weighting, CIC)
-                  jpe(i)=int(ype(i)/dy)+1         
-                  wye(i)=(y(jpe(i))-ype(i))/dy     
-                  rhoe(jpe(i)-1)=wye(i)*wq+rhoe(jpe(i)-1)
-                  rhoe(jpe(i))=(1.-wye(i))*wq+rhoe(jpe(i))
+                  jp         =int(ype(i) / dy) + 1
+                  wy         =   (y(jp)-ype(i)) / dy     
+                  rhoe(jp-1) =    wy*wq + rhoe(jp-1)
+                  rhoe(jp  ) =   (1d0-wy)*wq + rhoe(jp)
             end do
             !$omp end do
             !$omp do 
             ! Ion charge deposition on the mesh points 
             do i = 1, npi       
                   ! Charge density weighting (linear weighting, CIC) 
-                  jpi(i)=int(ypi(i)/dy)+1         
-                  wyi(i)=(y(jpi(i))-ypi(i))/dy     
-                  rhoi(jpi(i)-1)=wyi(i)*wq+rhoi(jpi(i)-1)
-                  rhoi(jpi(i))=(1.-wyi(i))*wq+rhoi(jpi(i))                   
+                  jp         =int(ypi(i) / dy) + 1
+                  wy         =   (y(jp)-ypi(i)) / dy     
+                  rhoi(jp-1) =    wy*wq + rhoi(jp-1)
+                  rhoi(jp  ) =   (1d0-wy)*wq + rhoi(jp)
             end do
             !$omp end do
             !$omp end parallel
@@ -769,9 +778,9 @@
             use rand
             use omp_lib
             implicit none
-            integer                    :: i,ie,ii,thread_num
+            integer                    :: i,ie,ii,thread_num,jp
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
-            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec
+            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy,Eyp
             double precision, external :: ran2
 
             ! Leapfrog method (Boris algorithm)
@@ -781,10 +790,10 @@
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
             !$omp parallel default(none) firstprivate(tB, tBB, duekteme, duektimi, conste, consti, Ez0, dt, zch, zacc) &
-            !$omp                             private(thread_num, ie, ii, i, vyea, vzea, vyeb, vzeb,                   &
+            !$omp                             private(thread_num, ie, ii, i, jp, wy, Eyp, vyea, vzea, vyeb, vzeb,      &
             !$omp                                     vyec, vzec, rs1, rs2, ang, vmod, vxpeprox, vxpiprox)             &
-            !$omp                              shared(ny, y, Ey, npe, npi, Eype, Eypi, wye, wyi, jpe, jpi, vxpe,       &
-            !$omp                                     vype, vzpe, vxpi, vypi, vzpi, ype, zpe, ypi, zpi, seedNum)
+            !$omp                              shared(ny, y, Ey, npe, npi, vxpe, vype, vzpe, vxpi, vypi, vzpi, ype,    &
+            !$omp                                     zpe, ypi, zpi, seedNum)
             thread_num  = omp_get_thread_num()
             iseed       = seedNum (thread_num+1)
             ie          = 0
@@ -793,26 +802,31 @@
             ! Electrons loop
             !$omp do
             do i = 1, npe
-                  Eype(i)=wye(i)*Ey(jpe(i)-1)+(1.-wye(i))*Ey(jpe(i))
-                  ! first half acceleration by electric field
-                  vyea=vype(i)-conste*Eype(i)         
-                  vzea=vzpe(i)-conste*Ez0
+
+                  ! Compute index of occupied cell, weighting factor and electric field at particle
+                  jp         =int(ype(i) / dy) + 1
+                  wy         =   (y(jp)-ype(i)) / dy     
+                  Eyp        = wy*Ey(jp-1) + (1.-wy)*Ey(jp)
+                  
+                  ! First half acceleration by electric field
+                  vyea    = vype(i) - conste*Eyp
+                  vzea    = vzpe(i) - conste*Ez0
                   ! Full rotation around magnetic field
-                  vyeb=vyea-vzea*tB
-                  vzeb=vzea+vyea*tB 
-                  vyec=vyea-vzeb*tBB
-                  vzec=vzea+vyeb*tBB
+                  vyeb    = vyea - vzea*tB
+                  vzeb    = vzea + vyea*tB 
+                  vyec    = vyea - vzeb*tBB
+                  vzec    = vzea + vyeb*tBB
                   ! Second half acceleration by electric field  
-                  vype(i)=vyec-conste*Eype(i)                
-                  vzpe(i)=vzec-conste*Ez0
+                  vype(i) = vyec - conste*Eyp               
+                  vzpe(i) = vzec - conste*Ez0
                   ! Coordinates updates (cartesian approximation)
-                  ype(i)=ype(i)+vype(i)*dt
-                  zpe(i)=zpe(i)+vzpe(i)*dt
+                  ype (i) = ype(i) + vype(i)*dt
+                  zpe (i) = zpe(i) + vzpe(i)*dt
                   ! Periodic boundary conditions
-                  if (ype(i).le.y(0)) then
-                        ype(i)=y(ny)+ype(i)
+                  if      ( ype(i) .le. y(0) ) then
+                        ype(i) = y(ny)  + ype(i)
                   else if (ype(i).ge.y(ny)) then
-                        ype(i)=ype(i)-y(ny)
+                        ype(i) = ype(i) -  y(ny)
                   end if
                   ! ! Refresh particles
                   ! if ((zch-zpe(i)).ge.zacc) then
@@ -841,17 +855,23 @@
 
             !$omp do
             ! Ions loop   
-            do i=1,npi
-                  Eypi(i)=wyi(i)*Ey(jpi(i)-1)+(1.-wyi(i))*Ey(jpi(i))
-                  vypi(i)=vypi(i)+consti*Eypi(i)
-                  vzpi(i)=vzpi(i)+consti*Ez0
-                  ypi(i)=ypi(i)+vypi(i)*dt
-                  zpi(i)=zpi(i)+vzpi(i)*dt
+            do i = 1, npi
+
+                  ! Compute index of occupied cell, weighting factor and electric field at particle
+                  jp         =int(ypi(i) / dy) + 1
+                  wy         =   (y(jp)-ypi(i)) / dy     
+                  Eyp        = wy*Ey(jp-1) + (1.-wy)*Ey(jp)
+
+                  vypi(i)    = vypi(i) + consti*Eyp
+                  vzpi(i)    = vzpi(i) + consti*Ez0
+                  ypi(i)     = ypi (i) + vypi(i)*dt
+                  zpi(i)     = zpi (i) + vzpi(i)*dt
+                  
                   ! Periodic boundary conditions
-                  if (ypi(i).lt.y(0)) then
-                        ypi(i)=y(ny)+ypi(i)
-                  else if (ypi(i).ge.y(ny)) then
-                        ypi(i)=ypi(i)-y(ny)
+                  if      ( ypi(i) .lt. y(0) ) then
+                        ypi(i) = y(ny) + ypi(i)
+                  else if ( ypi(i) .ge. y(ny)) then
+                        ypi(i) = ypi(i)-  y(ny)
                   end if
                   ! ! Refresh particles
                   ! if (zpi(i).ge.zch) then
