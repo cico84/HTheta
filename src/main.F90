@@ -533,7 +533,7 @@
             allocate( vxpi(1:npmax) ) 
             allocate( vypi(1:npmax) ) 
             allocate( vzpi(1:npmax) )
-            
+
             return
 
       end subroutine
@@ -772,6 +772,7 @@
             integer                    :: i,ie,ii,thread_num,jp
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
             double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy,Eyp
+            double precision           :: ymin, ymax
             double precision, external :: ran2
 
             ! Leapfrog method (Boris algorithm)
@@ -779,8 +780,11 @@
             tBB = 2.*tB/(1.+tB**2)
             duekteme = -2.*kB*Te0/me   ! Electrons leap frog constant
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
+            ymin     = y( 0)
+            ymax     = y(ny)
 
-            !$omp parallel default(none) firstprivate(tB, tBB, duekteme, duektimi, conste, consti, Ez0, dt, zch, zacc) &
+            !$omp parallel default(none) firstprivate(tB, tBB, duekteme, duektimi, conste, consti, Ez0, dt, zch, zacc, &
+            !$omp                                     ymin, ymax)                                                      &
             !$omp                             private(thread_num, ie, ii, i, jp, wy, Eyp, vyea, vzea, vyeb, vzeb,      &
             !$omp                                     vyec, vzec, rs1, rs2, ang, vmod, vxpeprox, vxpiprox)             &
             !$omp                              shared(ny, y, Ey, npe, npi, vxpe, vype, vzpe, vxpi, vypi, vzpi, ype,    &
@@ -814,10 +818,10 @@
                   ype (i) = ype(i) + vype(i)*dt
                   zpe (i) = zpe(i) + vzpe(i)*dt
                   ! Periodic boundary conditions
-                  if      ( ype(i) .le. y(0) ) then
-                        ype(i) = y(ny)  + ype(i)
-                  else if (ype(i).ge.y(ny)) then
-                        ype(i) = ype(i) -  y(ny)
+                  if      ( ype(i) .le. y_min  ) then
+                        ype(i) = y_max  + ype(i)
+                  else if (ype(i)  .ge. y_max ) then
+                        ype(i) = ype(i) -  y_max
                   end if
                   ! ! Refresh particles
                   ! if ((zch-zpe(i)).ge.zacc) then
@@ -859,10 +863,10 @@
                   zpi(i)     = zpi (i) + vzpi(i)*dt
 
                   ! Periodic boundary conditions
-                  if      ( ypi(i) .lt. y(0) ) then
-                        ypi(i) = y(ny) + ypi(i)
-                  else if ( ypi(i) .ge. y(ny)) then
-                        ypi(i) = ypi(i)-  y(ny)
+                  if      ( ypi(i) .lt. y_min ) then
+                        ypi(i) = y_max  + ypi(i)
+                  else if ( ypi(i) .ge. y_max ) then
+                        ypi(i) = ypi(i) -  y_max
                   end if
                   ! ! Refresh particles
                   ! if (zpi(i).ge.zch) then
