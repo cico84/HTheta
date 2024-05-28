@@ -413,9 +413,9 @@
                   end do
                   Ee_ave = Ee_ave*JtoeV*0.5*me/npinit
                   mob    = mob/(npinit*Ez0)
-                  !$acc parallel loop reduction(+: Ee_ave, mob)
+                  !$acc parallel loop reduction(+: Ei_ave)
                   do t = 1, n_tiles
-                        !$acc loop vector reduction(+: Ee_ave, mob)
+                        !$acc loop vector reduction(+: Ei_ave)
                         do i = 1, npi(t)
                               Ei_ave = Ei_ave + (vxpi(i,t)**2+vypi(i,t)**2+vzpi(i,t)**2)
                         end do
