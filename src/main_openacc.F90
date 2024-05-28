@@ -403,7 +403,7 @@
                   ! "Reduction" copies automatically the results on the host
                   !$acc parallel loop reduction(+: Ee_ave, mob)
                   do t = 1, n_tiles
-                        !$acc loop vector
+                        !$acc loop vector reduction(+: Ee_ave, mob)
                         do i = 1, npe(t)
                               Ee_ave = Ee_ave + (vxpe(i,t)**2+vype(i,t)**2+vzpe(i,t)**2)
                               mob    = mob + vzpe(i,t)
@@ -413,7 +413,7 @@
                   mob    = mob/(npinit*Ez0)
                   !$acc parallel loop reduction(+: Ee_ave, mob)
                   do t = 1, n_tiles
-                        !$acc loop vector
+                        !$acc loop vector reduction(+: Ee_ave, mob)
                         do i = 1, npi(t)
                               Ei_ave = Ei_ave + (vxpi(i,t)**2+vypi(i,t)**2+vzpi(i,t)**2)
                         end do
