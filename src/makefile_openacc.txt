@@ -2,7 +2,7 @@ SRCDIR = ${HTHETA}/src/
 OBJDIR = ${HTHETA}/bin/objects/
 FC     = nvfortran
 
-OPTS_F = -O3 -acc=gpu -fast -Minfo=accel -gpu=lineinfo -module $(OBJDIR)   # ,ccnative
+OPTS_F = -O3 -acc=gpu -fast -Minfo=accel -gpu=lineinfo,cc80 -module $(OBJDIR)
 OPTS_OMP =
 
 LIBLIST  = -L${NVHPC_HOME}/Linux_x86_64/24.3/cuda/lib64/ -lnvToolsExt
