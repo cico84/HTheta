@@ -868,9 +868,9 @@
                         ype (i,t) = ype(i,t) + vype(i,t)*dt
                         zpe (i,t) = zpe(i,t) + vzpe(i,t)*dt
                         ! Periodic boundary conditions
-                        if      ( ype(i,t) .le. y(0) ) then
+                        if      ( ype(i,t) .le. y(0 ) ) then
                               ype(i,t) =   y (ny) + ype(i,t)
-                        else if (ype(i).ge.y(ny)) then
+                        else if ( ype(i,t) .ge. y(ny) ) then
                               ype(i,t) = ype(i,t) -  y(ny)
                         end if
                         !   ! Refresh particles
