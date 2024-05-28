@@ -602,6 +602,7 @@
       subroutine mesh 
           
             use grid
+            use part
             implicit none
             integer :: j, ncells_t
       
