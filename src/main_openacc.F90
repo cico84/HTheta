@@ -403,7 +403,7 @@
                   ! "Reduction" copies automatically the results on the host
                   !$acc parallel loop reduction(+: Ee_ave, mob)
                   do t = 1, n_tiles
-                        !$acc parallel vector
+                        !$acc loop vector
                         do i = 1, npe(t)
                               Ee_ave = Ee_ave + (vxpe(i,t)**2+vype(i,t)**2+vzpe(i,t)**2)
                               mob    = mob + vzpe(i,t)
@@ -413,7 +413,7 @@
                   mob    = mob/(npe*Ez0)
                   !$acc parallel loop reduction(+: Ee_ave, mob)
                   do t = 1, n_tiles
-                        !$acc parallel vector
+                        !$acc loop vector
                         do i = 1, npi(t)
                               Ei_ave = Ei_ave + (vxpi(i,t)**2+vypi(i,t)**2+vzpi(i,t)**2)
                         end do
@@ -847,7 +847,7 @@
             ! Electrons loop
             !$acc parallel loop
             do t = 1, n_tiles
-                  !$acc parallel vector
+                  !$acc loop vector
                   do i = 1, npe(t)
                         jp      = int(ype(i,t) / dy) + 1     
                         wy      = ( y(jp) - ype(i,t) ) / dy
@@ -900,7 +900,7 @@
             ! Ions loop
             !$acc parallel loop
             do t = 1, n_tiles
-                  !$acc parallel vector
+                  !$acc loop vector
                   do i = 1, npi(t)
                         jp      = int(ypi(i,t) / dy) + 1     
                         wy      = ( y(jp) - ypi(i,t) ) / dy
