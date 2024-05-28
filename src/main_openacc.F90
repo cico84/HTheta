@@ -180,7 +180,7 @@
             implicit none
             save
             integer            :: npmax, npmax_t, npic
-            integer, parameter :: n_tiles = 50
+            integer, parameter :: n_tiles = 500
             integer 		 :: npe(1:n_tiles), npi(1:n_tiles)
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:,:) :: ype, zpe, vxpe, vype, vzpe
