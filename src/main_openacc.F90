@@ -295,8 +295,6 @@
             write (3,*) '# cells     =', ny
             write (3,*) 'Total particle size [MB] treated by the PUSH function', &
                         1d-6*(10 * float(npinit) * 8 + 2 * float(ny+1) * 8)
-
-            close (3)      
             
             !******************************************************************************
 
@@ -338,6 +336,7 @@
             
             !******************************************************************************      
             write(3,*) " Maximum number of particles per tile:", maxval(npe(1:n_tiles)), maxval(npi(1:n_tiles))
+            close (3) 
 
             ! Copy data from CPU to GPU memory
 
