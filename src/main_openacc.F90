@@ -335,7 +335,8 @@
             write(12,'(1A60)') "  SCATTER [s]    POISSON [s]     PUSH [s]        OTHR [s]   "
             
             !******************************************************************************      
-            
+            write(*,*) " Maximum number of particles per tile:", maxval(npe(1:n_tiles)), maxval(npi(1:n_tiles))
+
             ! Copy data from CPU to GPU memory
 
             ! *****************************************************************************
