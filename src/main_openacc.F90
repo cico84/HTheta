@@ -179,7 +179,7 @@
             use grid
             implicit none
             save
-            integer            :: npmax, npic
+            integer            :: npmax, npmax_t, npic
             integer, parameter :: n_tiles = 50
             integer 		 :: npe(1:n_tiles), npi(1:n_tiles)
             ! Datasets from 1 to npmax
@@ -253,6 +253,8 @@
             
             ! Read input parameters
             call read_input_parameters(out_name, out_path, nthreads)
+
+            npmax_t = npmax / n_tiles
 
             ! Allocate data vectors
             call allocate_fields()
@@ -343,10 +345,10 @@
             ! ******************************** PIC cycle **********************************
             ! *****************************************************************************
             !$acc enter data copyin(  vol(0:ny), rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
-            !$acc enter data copyin( vzpe(npmax/n_tiles, 1:n_tiles), vype(npmax/n_tiles, 1:n_tiles), vxpe(npmax/n_tiles, 1:n_tiles) )
-            !$acc enter data copyin(  ype(npmax/n_tiles, 1:n_tiles),  zpe(npmax/n_tiles, 1:n_tiles) )
-            !$acc enter data copyin( vzpi(npmax/n_tiles, 1:n_tiles), vypi(npmax/n_tiles, 1:n_tiles), vxpi(npmax/n_tiles, 1:n_tiles) )
-            !$acc enter data copyin(  ypi(npmax/n_tiles, 1:n_tiles),  zpi(npmax/n_tiles, 1:n_tiles) )
+            !$acc enter data copyin( vzpe(1:npmax_t, 1:n_tiles), vype(1:npmax_t, 1:n_tiles), vxpe(1:npmax_t, 1:n_tiles) )
+            !$acc enter data copyin(  ype(1:npmax_t, 1:n_tiles),  zpe(1:npmax_t, 1:n_tiles) )
+            !$acc enter data copyin( vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles), vxpi(1:npmax_t, 1:n_tiles) )
+            !$acc enter data copyin(  ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  npe(1:n_tiles), npi(1:n_tiles), ymin_t(1:n_tiles), ymax_t(1:n_tiles) )
             do ipic = 1, npic
                   
@@ -440,11 +442,11 @@
             ! end of PIC cycle
             end do
             !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny) )
-            !$acc exit data delete (  vxpe(npmax/n_tiles, 1:n_tiles), vxpi(npmax/n_tiles, 1:n_tiles) )
-            !$acc exit data copyout(  vzpe(npmax/n_tiles, 1:n_tiles), vype(npmax/n_tiles, 1:n_tiles) )
-            !$acc exit data copyout(   ype(npmax/n_tiles, 1:n_tiles),  zpe(npmax/n_tiles, 1:n_tiles) )
-            !$acc exit data copyout(  vzpi(npmax/n_tiles, 1:n_tiles), vypi(npmax/n_tiles, 1:n_tiles) )
-            !$acc exit data copyout(   ypi(npmax/n_tiles, 1:n_tiles),  zpi(npmax/n_tiles, 1:n_tiles) )
+            !$acc exit data delete (  vxpe(1:npmax_t, 1:n_tiles), vxpi(1:npmax_t, 1:n_tiles) )
+            !$acc exit data copyout(  vzpe(1:npmax_t, 1:n_tiles), vype(1:npmax_t, 1:n_tiles) )
+            !$acc exit data copyout(   ype(1:npmax_t, 1:n_tiles),  zpe(1:npmax_t, 1:n_tiles) )
+            !$acc exit data copyout(  vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles) )
+            !$acc exit data copyout(   ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
 
             !******************************************************************************
             !******************************************************************************
@@ -560,16 +562,16 @@
             allocate( ymax_t(1:n_tiles) )
             
             ! Datasets from 1 to npmax and 1 to n_tiles
-            allocate(  ype(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate(  zpe(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate( vxpe(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate( vype(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate( vzpe(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate(  ypi(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate(  zpi(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate( vxpi(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate( vypi(1:npmax/n_tiles, 1:n_tiles) ) 
-            allocate( vzpi(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate(  ype(1:npmax_t, 1:n_tiles) ) 
+            allocate(  zpe(1:npmax_t, 1:n_tiles) ) 
+            allocate( vxpe(1:npmax_t, 1:n_tiles) ) 
+            allocate( vype(1:npmax_t, 1:n_tiles) ) 
+            allocate( vzpe(1:npmax_t, 1:n_tiles) ) 
+            allocate(  ypi(1:npmax_t, 1:n_tiles) ) 
+            allocate(  zpi(1:npmax_t, 1:n_tiles) ) 
+            allocate( vxpi(1:npmax_t, 1:n_tiles) ) 
+            allocate( vypi(1:npmax_t, 1:n_tiles) ) 
+            allocate( vzpi(1:npmax_t, 1:n_tiles) ) 
 
             return
 
