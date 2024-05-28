@@ -605,7 +605,8 @@
             ncells_t        = ny / n_tiles
             ymin_t(1)       = y(0)
             do j = 2, n_tiles
-                  ymin_t(j) = ymin_t(j-1) + dy * (j-1)
+                  ymax_t(j-1) = ymin_t(j-1) + dy
+                  ymin_t(j)   = ymax_t(j-1)
             end do
             ymax_t(n_tiles) = y(ny)
 
@@ -623,9 +624,9 @@
             use diagn
             use rand
             implicit none
-            integer                    :: i
-            double precision           :: duekteme, duektimi
-            double precision, external :: ran2
+            integer                                :: i
+            double precision                       :: duekteme, duektimi
+            double precision, external             :: ran2, yp, zp
       
             npe = 0
             npi = 0
@@ -640,48 +641,52 @@
             
                   ! Electrons macro-particles:
                   rs=ran2(iseed)
-                  ype(npe)=rs*y(ny)
+                  yp=rs*y(ny)
                   rs=ran2(iseed)
-                  zpe(npe)=(zch-zacc)+rs*zacc
+                  zp=(zch-zacc)+rs*zacc
 
-                  npe = npe + 1
+                  cc_tile = min( floor( ( yp - y(0) ) / dy ) + 1, n_tiles)
+                  npe(cc_tile) = npe(cc_tile) + 1
+                  ype(npe(cc_tile), cc_tile) = yp
+                  zpe(npe(cc_tile), cc_tile) = zp
 
                   ! Full Maxwellian distribution (Box-Muller transformation)         
                   rs1=ran2(iseed)
                   rs2=ran2(iseed)
                   if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                  vxpe(npe)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
+                  vxpe(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
                   vxpeprox=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                  vxpe(npe)=vxpeprox
+                  vxpe(npe(cc_tile), cc_tile)=vxpeprox
                   end if
                   rs1=ran2(iseed)
                   rs2=ran2(iseed)
-                  vype(npe)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2) 
-                  vzpe(npe)=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
+                  vype(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2) 
+                  vzpe(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
                   
                   ! Ion macro-particles:
-                  npi=npi+1
-                  ypi(npi)=ype(npe)
+                  npi(cc_tile) = npe(cc_tile)
+                  ypi(npi(cc_tile), cc_tile)= yp
                   rs=ran2(iseed)
-                  zpi(npi)=(zch-zacc)+rs*zacc
+                  zp=(zch-zacc)+rs*zacc
+                  zpi(npi(cc_tile), cc_tile) = zp
 
                   ! Full Maxwellian distribution (Box-Muller transformation): vzi        
                   rs1=ran2(iseed)
                   rs2=ran2(iseed) 
                   if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                  vxpi(npi)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
+                  vxpi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
                   vxpiprox=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                  vxpi(npi)=vxpiprox
+                  vxpi(npi(cc_tile), cc_tile)=vxpiprox
                   end if
                   rs1=ran2(iseed)
                   rs2=ran2(iseed)
-                  vypi(npi)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)   
-                  vzpi(npi)=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
+                  vypi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)   
+                  vzpi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
 
             end do
-
+            
       return
       end subroutine
 
