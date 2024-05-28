@@ -33,10 +33,16 @@
 ! NOMENCLATURE:
 ! ny             = N. of cells along the azimuthal direction (along z there is only one cell) 
 ! y(j)           = Grid point azimuthal coordinate
-! ype (i)        = Azimuthal coordinate of the macro-particle "i"
-! vxpe(i)        = x-component (radial) of the macro-particle velocity
-! vype(i)        = y-component (azimuthal) of the macro-particle velocity
-! vzpe(i)        = z-component (axial) of the macro-particle velocity
+! ype (i,j)      = Azimuthal coordinate of the electron macro-particle "i" in tile "j"
+! zpe (i,j)      = Axial coordinate of the electron macro-particle "i" in tile "j"
+! vxpe(i,j)      = x-component (radial) of the electron macro-particle "i" velocity in tile "j"
+! vype(i,j)      = y-component (azimuthal) of the electron macro-particle "i" velocity in tile "j"
+! vzpe(i,j)      = z-component (axial) of the electron macro-particle "i" velocity in tile "j"
+! ypi (i,j)      = Azimuthal coordinate of the ion macro-particle "i" in tile "j"
+! zpi (i,j)      = Axial coordinate of the ion macro-particle "i" in tile "j"
+! vxpi(i,j)      = x-component (radial) of the ion macro-particle "i" velocity in tile "j"
+! vypi(i,j)      = y-component (azimuthal) of the ion macro-particle "i" velocity in tile "j"
+! vzpi(i,j)      = z-component (axial) of the ion macro-particle "i" velocity in tile "j"
 ! rhoi(j)        = Ion charge density at the grid node "j"
 ! rhoe(j)        = Electron charge density at the grid node "j"
 ! phi (j)        = Electric potential at grid node "j"
@@ -157,6 +163,7 @@
             double precision                            :: dy, duedy
             ! Datasets from 0 to ny
             double precision, allocatable, dimension(:) :: y, vol
+            double precision, allocatable, dimension(:) :: ymin_t, ymax_t
       end module grid
 
       module poi
@@ -172,12 +179,13 @@
             use grid
             implicit none
             save
-            integer            :: npmax,npic
-            integer 		 :: npe,npi
+            integer            :: npmax, npic
+            integer, parameter :: n_tiles = 50
+            integer 		 :: npe(1:n_tiles), npi(1:n_tiles)
             ! Datasets from 1 to npmax
-            double precision, allocatable, dimension(:) :: ype, zpe, vxpe, vype, vzpe
-            double precision, allocatable, dimension(:) :: ypi, zpi, vxpi, vypi, vzpi
-            double precision                            :: vxpeprox, vxpiprox
+            double precision, allocatable, dimension(:,:) :: ype, zpe, vxpe, vype, vzpe
+            double precision, allocatable, dimension(:,:) :: ypi, zpi, vxpi, vypi, vzpi
+            double precision                              :: vxpeprox, vxpiprox
       end module part
 
       module diagn
@@ -529,18 +537,22 @@
             allocate( phi (0:ny) )
             allocate( Ey  (0:ny) )
             allocate( dpoi(0:ny) )
+
+            ! Datasets with a dimension equal to the number of tiles
+            allocate( ymin_t(1:n_tiles) )
+            allocate( ymax_t(1:n_tiles) )
             
-            ! Datasets from 1 to npmax
-            allocate(  ype(1:npmax) ) 
-            allocate(  zpe(1:npmax) ) 
-            allocate( vxpe(1:npmax) ) 
-            allocate( vype(1:npmax) ) 
-            allocate( vzpe(1:npmax) ) 
-            allocate(  ypi(1:npmax) ) 
-            allocate(  zpi(1:npmax) ) 
-            allocate( vxpi(1:npmax) ) 
-            allocate( vypi(1:npmax) ) 
-            allocate( vzpi(1:npmax) ) 
+            ! Datasets from 1 to npmax and 1 to n_tiles
+            allocate(  ype(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate(  zpe(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate( vxpe(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate( vype(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate( vzpe(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate(  ypi(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate(  zpi(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate( vxpi(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate( vypi(1:npmax/n_tiles, 1:n_tiles) ) 
+            allocate( vzpi(1:npmax/n_tiles, 1:n_tiles) ) 
 
             return
 
@@ -576,7 +588,7 @@
           
             use grid
             implicit none
-            integer :: j
+            integer :: j, ncells_t
       
             y(0)  =  0.
             dy    = yd/ny
@@ -589,6 +601,13 @@
             do j = 0, ny
                   vol(j) = dy
             end do
+
+            ncells_t        = ny / n_tiles
+            ymin_t(1)       = y(0)
+            do j = 2, n_tiles
+                  ymin_t(j) = ymin_t(j-1) + dy * (j-1)
+            end do
+            ymax_t(n_tiles) = y(ny)
 
             return
 
@@ -617,14 +636,15 @@
             duektimi = -2.*kB*Ti0 / Mi
             
             ! Uniform distribution of initial electron and ion macro-particles
-            do i=1,npinit
+            do i = 1, npinit
             
                   ! Electrons macro-particles:
-                  npe=npe+1
                   rs=ran2(iseed)
                   ype(npe)=rs*y(ny)
                   rs=ran2(iseed)
                   zpe(npe)=(zch-zacc)+rs*zacc
+
+                  npe = npe + 1
 
                   ! Full Maxwellian distribution (Box-Muller transformation)         
                   rs1=ran2(iseed)
