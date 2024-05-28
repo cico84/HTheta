@@ -641,8 +641,8 @@
             use rand
             implicit none
             integer                                :: i, cc_tile, ncells_t
-            double precision                       :: duekteme, duektimi
-            double precision, external             :: ran2, yp, zp
+            double precision                       :: duekteme, duektimi, yp, zp
+            double precision, external             :: ran2
       
             npe = 0
             npi = 0
