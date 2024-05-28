@@ -225,7 +225,7 @@
             use nvtx
 
             implicit none
-            integer          :: ipic, j, i 
+            integer          :: ipic, j, i, t
             integer*8        :: ini_seed
 
       !******************************************************************************
@@ -342,8 +342,10 @@
             ! ******************************** PIC cycle **********************************
             ! *****************************************************************************
             !$acc enter data copyin(  vol(0:ny), rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
-            !$acc enter data copyin( vzpe(1:npe), vype(1:npe), vxpe(1:npe),  ype(1:npe),  zpe(1:npe) )
-            !$acc enter data copyin( vzpi(1:npi), vypi(1:npi), vxpi(1:npi),  ypi(1:npi),  zpi(1:npi) )
+            !$acc enter data copyin( vzpe(npmax/n_tiles, 1:n_tiles), vype(npmax/n_tiles, 1:n_tiles), vxpe(npmax/n_tiles, 1:n_tiles) )
+            !$acc enter data copyin(  ype(npmax/n_tiles, 1:n_tiles),  zpe(npmax/n_tiles, 1:n_tiles) )
+            !$acc enter data copyin( vzpi(npmax/n_tiles, 1:n_tiles), vypi(npmax/n_tiles, 1:n_tiles), vxpi(npmax/n_tiles, 1:n_tiles) )
+            !$acc enter data copyin(  ypi(npmax/n_tiles, 1:n_tiles),  zpi(npmax/n_tiles, 1:n_tiles) )
             do ipic = 1, npic
                   
                   call system_clock(t0)
@@ -389,23 +391,34 @@
                   call system_clock(t3)
                   time_push = dble(t3 - t2) / dble(nticks_sec)
 
+                  !call nvtxStartRange('TILES')
+                  ! Update macro-particles positions and velocities
+                  !call push
+                  !call nvtxEndRange
+
                   ! Diagnostics: averaged energy and mobility
-                  Ee_ave = 0.
-                  Ei_ave = 0.
-                  mob    = 0.
+                  Ee_ave = 0.0d0
+                  Ei_ave = 0.0d0
+                  mob    = 0.0d0
                   ! "Reduction" copies automatically the results on the host
                   !$acc parallel loop reduction(+: Ee_ave, mob)
-                  do i = 1, npe
-                        Ee_ave = Ee_ave + (vxpe(i)**2+vype(i)**2+vzpe(i)**2)
-                        mob    = mob + vzpe(i)
+                  do t = 1, n_tiles
+                        !$acc parallel vector
+                        do i = 1, npe(t)
+                              Ee_ave = Ee_ave + (vxpe(i,t)**2+vype(i,t)**2+vzpe(i,t)**2)
+                              mob    = mob + vzpe(i,t)
+                        end do
                   end do
-                  Ee_ave = Ee_ave*JtoeV*0.5*me/npe
+                  Ee_ave = Ee_ave*JtoeV*0.5*me/npinit
                   mob    = mob/(npe*Ez0)
-                  !$acc parallel loop reduction(+: Ei_ave     )
-                  do i = 1, npi
-                        Ei_ave = Ei_ave + (vxpi(i)**2+vypi(i)**2+vzpi(i)**2)
+                  !$acc parallel loop reduction(+: Ee_ave, mob)
+                  do t = 1, n_tiles
+                        !$acc parallel vector
+                        do i = 1, npi(t)
+                              Ei_ave = Ei_ave + (vxpi(i,t)**2+vypi(i,t)**2+vzpi(i,t)**2)
+                        end do
                   end do
-                  Ei_ave = Ei_ave*JtoeV*0.5*Mi/npi
+                  Ei_ave = Ei_ave*JtoeV*0.5*Mi/npinit
 
                   call system_clock(t4)
                   time_othr = dble(t4 - t3) / dble(nticks_sec)
@@ -425,9 +438,11 @@
             ! end of PIC cycle
             end do
             !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
-            !$acc exit data delete (  vxpe(1:npe), vxpi(1:npi) )
-            !$acc exit data copyout(  vzpe(1:npe), vype(1:npe), ype(1:npe), zpe(1:npe) )
-            !$acc exit data copyout(  vzpi(1:npi), vypi(1:npi), ypi(1:npi), zpi(1:npi) )
+            !$acc exit data delete (  vxpe(npmax/n_tiles, 1:n_tiles), vxpi(npmax/n_tiles, 1:n_tiles) )
+            !$acc exit data copyout(  vzpe(npmax/n_tiles, 1:n_tiles), vype(npmax/n_tiles, 1:n_tiles) )
+            !$acc exit data copyout(   ype(npmax/n_tiles, 1:n_tiles),  zpe(npmax/n_tiles, 1:n_tiles) )
+            !$acc exit data copyout(  vzpi(npmax/n_tiles, 1:n_tiles), vypi(npmax/n_tiles, 1:n_tiles) )
+            !$acc exit data copyout(   ypi(npmax/n_tiles, 1:n_tiles),  zpi(npmax/n_tiles, 1:n_tiles) )
 
             !******************************************************************************
             !******************************************************************************
@@ -624,7 +639,7 @@
             use diagn
             use rand
             implicit none
-            integer                                :: i
+            integer                                :: i, cc_tile, ncells_t
             double precision                       :: duekteme, duektimi
             double precision, external             :: ran2, yp, zp
       
@@ -632,7 +647,8 @@
             npi = 0
 
             iseed    = seedNum(1)
-      
+            ncells_t = ny / n_tiles
+
             duekteme = -2.*kB*Te0 / me
             duektimi = -2.*kB*Ti0 / Mi
             
@@ -645,7 +661,7 @@
                   rs=ran2(iseed)
                   zp=(zch-zacc)+rs*zacc
 
-                  cc_tile = min( floor( ( yp - y(0) ) / dy ) + 1, n_tiles)
+                  cc_tile = min( floor( ( yp - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
                   npe(cc_tile) = npe(cc_tile) + 1
                   ype(npe(cc_tile), cc_tile) = yp
                   zpe(npe(cc_tile), cc_tile) = zp
@@ -654,10 +670,10 @@
                   rs1=ran2(iseed)
                   rs2=ran2(iseed)
                   if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                  vxpe(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
-                  vxpeprox=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
+                        vxpe(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
+                        vxpeprox=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                  vxpe(npe(cc_tile), cc_tile)=vxpeprox
+                        vxpe(npe(cc_tile), cc_tile)=vxpeprox
                   end if
                   rs1=ran2(iseed)
                   rs2=ran2(iseed)
@@ -666,7 +682,7 @@
                   
                   ! Ion macro-particles:
                   npi(cc_tile) = npe(cc_tile)
-                  ypi(npi(cc_tile), cc_tile)= yp
+                  ypi(npi(cc_tile), cc_tile) = yp
                   rs=ran2(iseed)
                   zp=(zch-zacc)+rs*zacc
                   zpi(npi(cc_tile), cc_tile) = zp
@@ -675,10 +691,10 @@
                   rs1=ran2(iseed)
                   rs2=ran2(iseed) 
                   if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                  vxpi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
-                  vxpiprox=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
+                        vxpi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
+                        vxpiprox=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                  vxpi(npi(cc_tile), cc_tile)=vxpiprox
+                        vxpi(npi(cc_tile), cc_tile)=vxpiprox
                   end if
                   rs1=ran2(iseed)
                   rs2=ran2(iseed)
@@ -698,7 +714,7 @@
             use poi
             use part
             implicit none
-            integer          :: i, j, jp
+            integer          :: i, j, t, jp
             double precision :: wy
       
             ! Charge density initialization to 0
@@ -710,26 +726,32 @@
             
             ! Electron charge deposition on the mesh points 
             !$acc parallel loop
-            do i = 1, npe     
-                  ! Charge density weighting (linear weighting, CIC)
-                  jp             = int(ype(i) / dy) + 1         
-                  wy             = ( y(jp) - ype(i) ) / dy
-                  !$acc atomic update
-                  rhoe(jp-1) = wy*wq + rhoe(jp-1)
-                  !$acc atomic update
-                  rhoe(jp  ) = (1.0d0 - wy )*wq + rhoe(jp)
+            do t = 1, n_tiles
+                  !$acc loop vector
+                  do i = 1, npe(t)
+                        ! Charge density weighting (linear weighting, CIC)
+                        jp             = int(ype(i,t) / dy) + 1         
+                        wy             = ( y(jp) - ype(i,t) ) / dy
+                        !$acc atomic update
+                        rhoe(jp-1) = wy*wq + rhoe(jp-1)
+                        !$acc atomic update
+                        rhoe(jp  ) = (1.0d0 - wy )*wq + rhoe(jp)
+                  end do
             end do
             
             ! Ion charge deposition on the mesh points 
             !$acc parallel loop
-            do i = 1, npi       
-                  ! Charge density weighting (linear weighting, CIC) 
-                  jp             = int(ypi(i) / dy) + 1         
-                  wy             = ( y(jp) - ypi(i) ) / dy
-                  !$acc atomic update   
-                  rhoi(jp-1) = wy*wq + rhoi(jp-1)
-                  !$acc atomic update
-                  rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)                   
+            do t = 1, n_tiles
+                  !$acc loop vector
+                  do i = 1, npi(t)      
+                        ! Charge density weighting (linear weighting, CIC) 
+                        jp             = int(ypi(i,t) / dy) + 1         
+                        wy             = ( y(jp) - ypi(i,t) ) / dy
+                        !$acc atomic update   
+                        rhoi(jp-1) = wy*wq + rhoi(jp-1)
+                        !$acc atomic update
+                        rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)                   
+                  end do
             end do
 
             ! Periodic boundary conditions for both ion and electron charge density
@@ -811,7 +833,7 @@
             use part
             use rand
             implicit none
-            integer                    :: i,ie,ii,thread_num,jp
+            integer                    :: i,ie,ii,thread_num,jp,t
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
             double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy,Eyp
             double precision, external :: ran2
@@ -823,93 +845,99 @@
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
             ! Electrons loop
-            !$acc kernels loop
-            do i = 1, npe
-                  jp      = int(ype(i) / dy) + 1     
-                  wy      = ( y(jp) - ype(i) ) / dy
-                  Eyp     = wy*Ey(jp-1) + (1.-wy)*Ey(jp)
-                  ! first half acceleration by electric field
-                  vyea = vype(i) - conste*Eyp         
-                  vzea = vzpe(i) - conste*Ez0
-                  ! Full rotation around magnetic field
-                  vyeb = vyea    - vzea*tB
-                  vzeb = vzea    + vyea*tB 
-                  vyec = vyea    - vzeb*tBB
-                  vzec = vzea    + vyeb*tBB
-                  ! Second half acceleration by electric field  
-                  vype(i) = vyec - conste*Eyp              
-                  vzpe(i) = vzec - conste*Ez0
-                  ! Coordinates updates (cartesian approximation)
-                  ype (i) = ype(i) + vype(i)*dt
-                  zpe (i) = zpe(i) + vzpe(i)*dt
-                  ! Periodic boundary conditions
-                  if      ( ype(i) .le. y(0) ) then
-                        ype(i) = y (ny) + ype(i)
-                  else if (ype(i).ge.y(ny)) then
-                        ype(i) = ype(i) -  y(ny)
-                  end if
-                  !   ! Refresh particles
-                  !   if ((zch-zpe(i)).ge.zacc) then
-                  !         ie=ie+1
-                  !         zpe(i)=zch
-                  !         ! Full-Maxwellian distribution (Box-Muller transformation)         
-                  !         rs1=ran2(iseed)
-                  !         vmod=DSQRT(duekteme*DLOG(rs1))
-                  !         rs2=ran2(iseed)
-                  !         ang=duepi*rs2
-                  !         if ((MOD(ie+1,2)).eq.(MOD(2,2))) then         
-                  !               vxpe(i)=vmod*DCOS(ang)
-                  !               vxpeprox=vmod*DSIN(ang)
-                  !         else
-                  !               vxpe(i)=vxpeprox
-                  !         end if
-                  !         rs1=ran2(iseed)
-                  !         vmod=DSQRT(duekteme*DLOG(rs1))
-                  !         rs2=ran2(iseed)
-                  !         ang=duepi*rs2
-                  !         vype(i)=vmod*DCOS(ang) 
-                  !         vzpe(i)=vmod*DSIN(ang)
-                  !   end if
+            !$acc parallel loop
+            do t = 1, n_tiles
+                  !$acc parallel vector
+                  do i = 1, npe(t)
+                        jp      = int(ype(i,t) / dy) + 1     
+                        wy      = ( y(jp) - ype(i,t) ) / dy
+                        Eyp     = wy*Ey(jp-1) + (1.-wy)*Ey(jp)
+                        ! first half acceleration by electric field
+                        vyea = vype(i,t) - conste*Eyp         
+                        vzea = vzpe(i,t) - conste*Ez0
+                        ! Full rotation around magnetic field
+                        vyeb = vyea    - vzea*tB
+                        vzeb = vzea    + vyea*tB 
+                        vyec = vyea    - vzeb*tBB
+                        vzec = vzea    + vyeb*tBB
+                        ! Second half acceleration by electric field  
+                        vype(i,t) = vyec - conste*Eyp              
+                        vzpe(i,t) = vzec - conste*Ez0
+                        ! Coordinates updates (cartesian approximation)
+                        ype (i,t) = ype(i,t) + vype(i,t)*dt
+                        zpe (i,t) = zpe(i,t) + vzpe(i,t)*dt
+                        ! Periodic boundary conditions
+                        if      ( ype(i,t) .le. y(0) ) then
+                              ype(i,t) =   y (ny) + ype(i,t)
+                        else if (ype(i).ge.y(ny)) then
+                              ype(i,t) = ype(i,t) -  y(ny)
+                        end if
+                        !   ! Refresh particles
+                        !   if ((zch-zpe(i)).ge.zacc) then
+                        !         ie=ie+1
+                        !         zpe(i)=zch
+                        !         ! Full-Maxwellian distribution (Box-Muller transformation)         
+                        !         rs1=ran2(iseed)
+                        !         vmod=DSQRT(duekteme*DLOG(rs1))
+                        !         rs2=ran2(iseed)
+                        !         ang=duepi*rs2
+                        !         if ((MOD(ie+1,2)).eq.(MOD(2,2))) then         
+                        !               vxpe(i)=vmod*DCOS(ang)
+                        !               vxpeprox=vmod*DSIN(ang)
+                        !         else
+                        !               vxpe(i)=vxpeprox
+                        !         end if
+                        !         rs1=ran2(iseed)
+                        !         vmod=DSQRT(duekteme*DLOG(rs1))
+                        !         rs2=ran2(iseed)
+                        !         ang=duepi*rs2
+                        !         vype(i)=vmod*DCOS(ang) 
+                        !         vzpe(i)=vmod*DSIN(ang)
+                        !   end if
+                  end do
             end do
     
             ! Ions loop
-            !$acc kernels loop
-            do i = 1, npi
-                  jp      = int(ypi(i) / dy) + 1     
-                  wy      = ( y(jp) - ypi(i) ) / dy
-                  Eyp     = wy * Ey(jp - 1) + (1. - wy) * Ey(jp)
-                  vypi(i) = vypi(i) + consti*Eyp
-                  vzpi(i) = vzpi(i) + consti*Ez0
-                  ypi(i)  = ypi (i) + vypi(i)*dt
-                  zpi(i)  = zpi (i) + vzpi(i)*dt
-                  ! Periodic boundary conditions
-                  if      ( ypi(i) .lt. y (0) ) then
-                        ypi(i) = y(ny)  + ypi(i)
-                  else if ( ypi(i) .ge. y(ny) ) then
-                        ypi(i) = ypi(i) -  y(ny)
-                  end if
-                  !   ! Refresh particles
-                  !   if (zpi(i).ge.zch) then
-                  !         ii=ii+1
-                  !         zpi(i)=zch-zacc
-                  !         ! Full-Maxwellian distribution (Box-Muller transformation)         
-                  !         rs1=ran2(iseed)
-                  !         vmod=DSQRT(duektimi*DLOG(rs1))
-                  !         rs2=ran2(iseed)
-                  !         ang=duepi*rs2
-                  !         if ((MOD(ii+1,2)).eq.(MOD(2,2))) then         
-                  !               vxpi(i)=vmod*DCOS(ang)
-                  !               vxpiprox=vmod*DSIN(ang)
-                  !         else
-                  !               vxpi(i)=vxpiprox
-                  !         end if
-                  !         rs1=ran2(iseed)
-                  !         vmod=DSQRT(duektimi*DLOG(rs1))
-                  !         rs2=ran2(iseed)
-                  !         ang=duepi*rs2       
-                  !         vypi(i)=vmod*DCOS(ang) 
-                  !         vzpi(i)=vmod*DSIN(ang)
-                  !   end if
+            !$acc parallel loop
+            do t = 1, n_tiles
+                  !$acc parallel vector
+                  do i = 1, npi(t)
+                        jp      = int(ypi(i,t) / dy) + 1     
+                        wy      = ( y(jp) - ypi(i,t) ) / dy
+                        Eyp     = wy * Ey(jp - 1) + (1. - wy) * Ey(jp)
+                        vypi(i,t) = vypi(i,t) + consti*Eyp
+                        vzpi(i,t) = vzpi(i,t) + consti*Ez0
+                        ypi(i,t)  = ypi (i,t) + vypi(i,t)*dt
+                        zpi(i,t)  = zpi (i,t) + vzpi(i,t)*dt
+                        ! Periodic boundary conditions
+                        if      ( ypi(i,t) .lt. y (0) ) then
+                              ypi(i,t) = y(ny)  + ypi(i,t)
+                        else if ( ypi(i,t) .ge. y(ny) ) then
+                              ypi(i,t) = ypi(i,t) -  y(ny)
+                        end if
+                        !   ! Refresh particles
+                        !   if (zpi(i).ge.zch) then
+                        !         ii=ii+1
+                        !         zpi(i)=zch-zacc
+                        !         ! Full-Maxwellian distribution (Box-Muller transformation)         
+                        !         rs1=ran2(iseed)
+                        !         vmod=DSQRT(duektimi*DLOG(rs1))
+                        !         rs2=ran2(iseed)
+                        !         ang=duepi*rs2
+                        !         if ((MOD(ii+1,2)).eq.(MOD(2,2))) then         
+                        !               vxpi(i)=vmod*DCOS(ang)
+                        !               vxpiprox=vmod*DSIN(ang)
+                        !         else
+                        !               vxpi(i)=vxpiprox
+                        !         end if
+                        !         rs1=ran2(iseed)
+                        !         vmod=DSQRT(duektimi*DLOG(rs1))
+                        !         rs2=ran2(iseed)
+                        !         ang=duepi*rs2       
+                        !         vypi(i)=vmod*DCOS(ang) 
+                        !         vzpi(i)=vmod*DSIN(ang)
+                        !   end if
+                  end do
             end do
 
             !******************************************************************************
