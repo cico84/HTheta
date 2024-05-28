@@ -410,7 +410,7 @@
                         end do
                   end do
                   Ee_ave = Ee_ave*JtoeV*0.5*me/npinit
-                  mob    = mob/(npe*Ez0)
+                  mob    = mob/(npinit*Ez0)
                   !$acc parallel loop reduction(+: Ee_ave, mob)
                   do t = 1, n_tiles
                         !$acc loop vector
