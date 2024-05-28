@@ -849,7 +849,7 @@
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
             ! Electrons loop
-            !$acc parallel loop vector_length(512)
+            !$acc parallel loop vector_length(256)
             do t = 1, n_tiles
                   !$acc loop vector
                   do i = 1, npe(t)
