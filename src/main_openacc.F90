@@ -346,6 +346,7 @@
             !$acc enter data copyin(  ype(npmax/n_tiles, 1:n_tiles),  zpe(npmax/n_tiles, 1:n_tiles) )
             !$acc enter data copyin( vzpi(npmax/n_tiles, 1:n_tiles), vypi(npmax/n_tiles, 1:n_tiles), vxpi(npmax/n_tiles, 1:n_tiles) )
             !$acc enter data copyin(  ypi(npmax/n_tiles, 1:n_tiles),  zpi(npmax/n_tiles, 1:n_tiles) )
+            !$acc enter data copyin(  npe(1:n_tiles), npi(1:n_tiles), ymin_t(1:n_tiles), ymax_t(1:n_tiles) )
             do ipic = 1, npic
                   
                   call system_clock(t0)
@@ -437,7 +438,7 @@
             
             ! end of PIC cycle
             end do
-            !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny), y(0:ny) )
+            !$acc exit data delete (  rhoi(0:ny), rhoe(0:ny), phi(0:ny), dpoi(0:ny), Ey(0:ny) )
             !$acc exit data delete (  vxpe(npmax/n_tiles, 1:n_tiles), vxpi(npmax/n_tiles, 1:n_tiles) )
             !$acc exit data copyout(  vzpe(npmax/n_tiles, 1:n_tiles), vype(npmax/n_tiles, 1:n_tiles) )
             !$acc exit data copyout(   ype(npmax/n_tiles, 1:n_tiles),  zpe(npmax/n_tiles, 1:n_tiles) )
