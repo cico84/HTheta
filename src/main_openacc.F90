@@ -285,12 +285,12 @@
             CFLe2 = vthetae*dt/dy     
             
             open  (3, file = trim(out_path)//'/'//trim(out_name)//'_parameters.out',status='unknown')
-            write (3,*) 'lD,dy=       ',Debye,dy
-            write (3,*) 'dtp,dtB,dt=  ',1./omegae,1./omegace,dt
-            write (3,*) 'CFLe=  	 ',CFLe1,CFLe2
-            write (3,*) 'vthe,vde,vzi=',vthe,vthetae,vzi
-            write (3,*) '# part,ppc=  ',npinit,float(npinit)/float(ny-1)
-
+            write (3,*) 'lD,dy       =', Debye, dy
+            write (3,*) 'dtp,dtB,dt  =', 1./omegae, 1./omegace,dt
+            write (3,*) 'CFLe        =', CFLe1, CFLe2
+            write (3,*) 'vthe,vde,vzi=', vthe, vthetae, vzi
+            write (3,*) '# part,ppc  =', npinit, float(npinit)/float(ny-1)
+            write (3,*) '# cells     =', ny, 1d-6*(10 * npinit * 8 + 2 * (ny+1) * 8)
             write (3,*) 'Total particle size [MB] treated by the PUSH function', &
                         1d-6*(10 * npinit * 8 + 2 * (ny+1) * 8)
 
