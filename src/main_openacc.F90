@@ -740,7 +740,7 @@
             do t = 1, n_tiles
                   !$acc cache(rhoe_t)
                   rhoe_t = 0.d0
-                  !$acc loop vector reduction(+: rhoe_t)
+                  !$acc loop vector
                   do i = 1, npe(t)
                         ! Charge density weighting (linear weighting, CIC)
                         jp             = int(ype(i,t) / dy) + 1
