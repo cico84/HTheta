@@ -739,6 +739,7 @@
             
             !$acc parallel loop private(rhoe_t)
             do t = 1, n_tiles
+                  !$acc cache(rhoe_t(0:ncells_t))
                   rhoe_t = 0.d0
                   !$acc loop vector
                   do i = 1, npe(t)
