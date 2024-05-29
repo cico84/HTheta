@@ -608,48 +608,48 @@
             duektimi = -2.*kB*Ti0 / Mi
             
             ! Uniform distribution of initial electron and ion macro-particles
-            do i=1,npinit
+            do i = 1, npinit
             
                   ! Electrons macro-particles:
-                  npe=npe+1
-                  rs=ran2(iseed)
-                  ype(npe)=rs*y(ny)
-                  rs=ran2(iseed)
-                  zpe(npe)=(zch-zacc)+rs*zacc
+                  npe      = npe + 1
+                  rs       = ran2(iseed)
+                  ype(npe) = rs*y(ny)
+                  rs       = ran2(iseed)
+                  zpe(npe) = (zch-zacc) + rs*zacc
 
                   ! Full Maxwellian distribution (Box-Muller transformation)         
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed)
-                  if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                  vxpe(npe)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
-                  vxpeprox=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed)
+                  if ((MOD(i+1,2)) .eq. (MOD(2,2))) then         
+                        vxpe(npe)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
+                        vxpeprox=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                  vxpe(npe)=vxpeprox
+                        vxpe(npe)=vxpeprox
                   end if
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed)
                   vype(npe)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2) 
                   vzpe(npe)=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
                   
                   ! Ion macro-particles:
-                  npi=npi+1
-                  ypi(npi)=ype(npe)
-                  rs=ran2(iseed)
-                  zpi(npi)=(zch-zacc)+rs*zacc
+                  npi      = npi + 1
+                  ypi(npi) = ype(npe)
+                  rs       = ran2(iseed)
+                  zpi(npi) = (zch-zacc) + rs*zacc
 
                   ! Full Maxwellian distribution (Box-Muller transformation): vzi        
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed) 
-                  if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                  vxpi(npi)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
-                  vxpiprox=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed) 
+                  if ((MOD(i+1,2)) .eq. (MOD(2,2))) then         
+                        vxpi(npi) = DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
+                        vxpiprox  = DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                  vxpi(npi)=vxpiprox
+                        vxpi(npi) = vxpiprox
                   end if
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed)
-                  vypi(npi)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)   
-                  vzpi(npi)=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed)
+                  vypi(npi) = DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)   
+                  vzpi(npi) = DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
 
             end do
 

@@ -179,9 +179,11 @@
             use grid
             implicit none
             save
-            integer            :: npmax, npmax_t, npic
+            integer            :: npmax, npmax_t, npic, ncells_t
             integer, parameter :: n_tiles = 500
             integer 		 :: npe(1:n_tiles), npi(1:n_tiles)
+            integer, allocatable, dimension(:,:,:)        :: tile_transfer_data ! 2D array containing IDs of particles changing tile
+            integer, allocatable, dimension(:  )          :: n_transfer         ! 1D array containing number of particles that have changed tile per tile
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:,:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:,:) :: ypi, zpi, vxpi, vypi, vzpi
@@ -254,7 +256,8 @@
             ! Read input parameters
             call read_input_parameters(out_name, out_path, nthreads)
 
-            npmax_t = npmax / n_tiles
+            npmax_t  = npmax / n_tiles
+            ncells_t = ny / n_tiles
 
             ! Allocate data vectors
             call allocate_fields()
@@ -559,7 +562,10 @@
             ! Datasets with a dimension equal to the number of tiles
             allocate( ymin_t(1:n_tiles) )
             allocate( ymax_t(1:n_tiles) )
-            
+
+            allocate( tile_transfer_data(1:npmax_t/ncells_t, 2, 1:n_tiles ) )
+            allocate( n_transfer        (1:n_tiles)                         )
+
             ! Datasets from 1 to npmax and 1 to n_tiles
             allocate(  ype(1:npmax_t, 1:n_tiles) ) 
             allocate(  zpe(1:npmax_t, 1:n_tiles) ) 
@@ -607,7 +613,7 @@
             use grid
             use part
             implicit none
-            integer :: j, ncells_t
+            integer :: j
       
             y(0)  =  0.
             dy    = yd/ny
@@ -621,7 +627,6 @@
                   vol(j) = dy
             end do
 
-            ncells_t        = ny / n_tiles
             ymin_t(1)       = y(0)
             do j = 2, n_tiles
                   ymax_t(j-1) = ymin_t(j-1) + dy
@@ -643,7 +648,7 @@
             use diagn
             use rand
             implicit none
-            integer                                :: i, cc_tile, ncells_t
+            integer                                :: i, cc_tile
             double precision                       :: duekteme, duektimi, yp, zp
             double precision, external             :: ran2
       
@@ -651,7 +656,6 @@
             npi = 0
 
             iseed    = seedNum(1)
-            ncells_t = ny / n_tiles
 
             duekteme = -2.*kB*Te0 / me
             duektimi = -2.*kB*Ti0 / Mi
@@ -660,10 +664,10 @@
             do i = 1, npinit
             
                   ! Electrons macro-particles:
-                  rs=ran2(iseed)
-                  yp=rs*y(ny)
-                  rs=ran2(iseed)
-                  zp=(zch-zacc)+rs*zacc
+                  rs = ran2(iseed)
+                  yp = rs*y(ny)
+                  rs = ran2(iseed)
+                  zp = (zch-zacc) + rs*zacc
 
                   cc_tile = min( floor( ( yp - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
                   npe(cc_tile) = npe(cc_tile) + 1
@@ -671,39 +675,39 @@
                   zpe(npe(cc_tile), cc_tile) = zp
 
                   ! Full Maxwellian distribution (Box-Muller transformation)         
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed)
-                  if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                        vxpe(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
-                        vxpeprox=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed)
+                  if ( (MOD(i+1,2)) .eq. (MOD(2,2)) ) then         
+                        vxpe(npe(cc_tile), cc_tile) = DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2)
+                        vxpeprox = DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                        vxpe(npe(cc_tile), cc_tile)=vxpeprox
+                        vxpe(npe(cc_tile), cc_tile) = vxpeprox
                   end if
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed)
-                  vype(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2) 
-                  vzpe(npe(cc_tile), cc_tile)=DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed)
+                  vype(npe(cc_tile), cc_tile) = DSQRT(duekteme*LOG(rs1))*DCOS(duepi*rs2) 
+                  vzpe(npe(cc_tile), cc_tile) = DSQRT(duekteme*LOG(rs1))*DSIN(duepi*rs2)
                   
                   ! Ion macro-particles:
                   npi(cc_tile) = npe(cc_tile)
                   ypi(npi(cc_tile), cc_tile) = yp
-                  rs=ran2(iseed)
-                  zp=(zch-zacc)+rs*zacc
+                  rs = ran2(iseed)
+                  zp = (zch-zacc) + rs*zacc
                   zpi(npi(cc_tile), cc_tile) = zp
 
                   ! Full Maxwellian distribution (Box-Muller transformation): vzi        
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed) 
-                  if ((MOD(i+1,2)).eq.(MOD(2,2))) then         
-                        vxpi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
-                        vxpiprox=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed) 
+                  if ( (MOD(i+1,2)) .eq. (MOD(2,2)) ) then         
+                        vxpi(npi(cc_tile), cc_tile) = DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)
+                        vxpiprox = DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
                   else
-                        vxpi(npi(cc_tile), cc_tile)=vxpiprox
+                        vxpi(npi(cc_tile), cc_tile) = vxpiprox
                   end if
-                  rs1=ran2(iseed)
-                  rs2=ran2(iseed)
-                  vypi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)   
-                  vzpi(npi(cc_tile), cc_tile)=DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
+                  rs1 = ran2(iseed)
+                  rs2 = ran2(iseed)
+                  vypi(npi(cc_tile), cc_tile) = DSQRT(duektimi*LOG(rs1))*DCOS(duepi*rs2)   
+                  vzpi(npi(cc_tile), cc_tile) = DSQRT(duektimi*LOG(rs1))*DSIN(duepi*rs2)
 
             end do
             
@@ -837,7 +841,7 @@
             use part
             use rand
             implicit none
-            integer                    :: i,ie,ii,thread_num,jp,t
+            integer                    :: i,ie,ii,thread_num,jp,t,cc_tile,local_n_transfer
             double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
             double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy,Eyp
             double precision, external :: ran2
@@ -847,6 +851,12 @@
             tBB = 2.*tB/(1.+tB**2)
             duekteme = -2.*kB*Te0/me   ! Electrons leap frog constant
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
+
+            ! Initialize the transfer data array
+            !$acc parallel loop
+            do t = 1, n_tiles
+                  n_transfer (t) = 0
+            end do
 
             ! Electrons loop
             !$acc parallel loop vector_length(256)
@@ -898,9 +908,34 @@
                         !         vype(i)=vmod*DCOS(ang) 
                         !         vzpe(i)=vmod*DSIN(ang)
                         !   end if
+                        !
+                        ! Determine particles that have left the tile
+                        cc_tile = min( floor( ( ype (i,t) - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
+                        if ( cc_tile .ne. t ) then
+                              !$acc atomic capture
+                              n_transfer (t)   = n_transfer (t) + 1
+                              local_n_transfer = n_transfer (t)
+                              !$acc end atomic
+                              tile_transfer_data(local_n_transfer, 1:2, t) = (/i,cc_tile/)
+                        end if
                   end do
             end do
     
+            ! Modify the particles list of each tile (for electrons)
+            !$acc parallel loop vector_length(256)
+            do t = 1, n_tiles
+                  !$acc loop vector
+                  do i = 1, n_transfer(t)
+
+                  end do
+            end do
+
+
+            !$acc parallel loop
+            do t = 1, n_tiles
+                  n_transfer (t) = 0
+            end do
+
             ! Ions loop
             !$acc parallel loop
             do t = 1, n_tiles
@@ -941,8 +976,19 @@
                         !         vypi(i)=vmod*DCOS(ang) 
                         !         vzpi(i)=vmod*DSIN(ang)
                         !   end if
+                        ! Determine particles that have left the tile
+                        cc_tile = min( floor( ( ypi (i,t) - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
+                        if ( cc_tile .ne. t ) then
+                              !$acc atomic capture
+                              n_transfer (t)   = n_transfer (t) + 1
+                              local_n_transfer = n_transfer (t)
+                              !$acc end atomic
+                              tile_transfer_data(local_n_transfer, 1:2, t) = (/i,cc_tile/)
+                        end if
                   end do
             end do
+
+            ! Modify the particles list of each tile (for ions)
 
             !******************************************************************************
             !******************************************************************************        
