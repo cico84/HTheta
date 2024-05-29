@@ -751,8 +751,9 @@
                               rhoe_t(jp_t  ) = (1.0d0 - wy )*wq + rhoe_t(jp_t  )
                         end if
                   end do
-                  !$acc atomic update
+                  !$acc atomic capture
                   rhoe ((t-1)*ncells_t : t*ncells_t) = rhoe ((t-1)*ncells_t : t*ncells_t) + rhoe_t(0:ncells_t)
+                  !$acc end atomic
             end do
             
             ! Ion charge deposition on the mesh points 
