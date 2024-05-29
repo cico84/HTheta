@@ -776,8 +776,7 @@
                   ! rhoe( (t-1)*ncells_t    ) = rhoe( (t-1)*ncells_t    ) + rhoe_t(1, j)
                   ! !$acc atomic update
                   ! rhoe( (t  )*ncells_t    ) = rhoe( (t  )*ncells_t    ) + rhoe_t(1, j)
-
-                  !$acc loop vector
+                  
                   do j = 0, ncells_t
                         sum = 0.0d0
                         !$acc loop vector reduction(+:sum)
