@@ -739,8 +739,9 @@
             
             ! Electron charge deposition on the mesh points
 
-            !$acc parallel loop vector_length(vectorlen) private(rhoe_t) present(ype, npe, y, rhoe)
+            !$acc parallel loop vector_length(vectorlen)  present(ype, npe, y, rhoe) private(rhoe_t)
             do t = 1, n_tiles
+                  !$acc cache(rhoe_t(1:vectorlen,0:ncells_t))
                   rhoe_t = 0.d0
                   !$acc loop vector collapse(2)
                   do i = 1, npe(t), vectorlen 
@@ -756,8 +757,15 @@
                                     !      rhoe_t (k, jp_t-1) = rhoe_t(jp_t-1) +          wy   * wq 
                                     !      rhoe_t (k, jp_t  ) = rhoe_t(jp_t  ) + (1.0d0 - wy ) * wq 
                                     !end if
-                                    rhoe_t(k, jp_t    ) = rhoe_t(k, jp_t    ) + (1.0d0 - wy ) * wq
-                                    rhoe_t(k, jp_t + 1) = rhoe_t(k, jp_t + 1) +          wy   * wq
+                                    if ( jp_t > 0 .and. jp_t <= ncells_t ) then
+                                       rhoe_t(k, jp_t    ) = rhoe_t(k, jp_t    ) + (1.0d0 - wy ) * wq
+                                       rhoe_t(k, jp_t + 1) = rhoe_t(k, jp_t + 1) +          wy   * wq
+                                    else
+                                       !$acc atomic update
+                                       rhoe(jp    ) = rhoe(jp    ) + (1.0d0 - wy ) * wq
+                                       !$acc atomic update
+                                       rhoe(jp + 1) = rhoe(jp + 1) +          wy   * wq
+                                    endif
                                     
                               end if
                         end do
@@ -1014,6 +1022,7 @@
                         !
                         ! Determine particles that have left the tile
                         cc_tile = min( floor( ( ype (i,t) - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
+#if 0
                         if ( cc_tile .ne. t ) then
                               !$acc atomic capture
                               n_transfer (t)   = n_transfer (t) + 1
@@ -1028,9 +1037,11 @@
                               tile_receive_data   (1:5, local_n_receive, cc_tile) = &
                               (/ype(i,t), zpe(i,t), vxpe(i,t), vype(i,t), vzpe(i,t)/)
                         end if
-                  end do
+#endif
+                     end do
             end do
 
+#if 0
             ! Remove particles that have left each tile (for electrons)
             !$acc parallel loop 
             do t = 1, n_tiles
@@ -1068,7 +1079,7 @@
                   n_transfer (t) = 0
                   n_receive  (t) = 0
             end do
-
+#endif
             ! Ions loop
             !$acc parallel loop
             do t = 1, n_tiles
