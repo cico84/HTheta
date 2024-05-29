@@ -724,7 +724,7 @@
             use poi
             use part
             implicit none
-            integer          :: i, j, t, jp, jp_t
+            integer          :: i, j, t, jp, jp_t, jt
             double precision :: wy
             double precision :: rhoe_t(0:10)
       
@@ -736,7 +736,7 @@
             end do
             
             ! Electron charge deposition on the mesh points
-            !$acc parallel loop private(rhoe_t)
+            !$acc parallel loop private(rhoe_t) present(ype, npe, y, rhoe)
             do t = 1, n_tiles
                   !$acc cache(rhoe_t)
                   rhoe_t = 0.d0
@@ -747,14 +747,19 @@
                         jp_t           = jp - (t - 1) * ncells_t
                         wy             = ( y(jp) - ype(i,t) ) / dy
                         if(jp_t > 0 .and. jp_t <= ncells_t)then
-                              rhoe_t(jp_t-1) =          wy  *wq + rhoe_t(jp_t-1)
-                              rhoe_t(jp_t  ) = (1.0d0 - wy )*wq + rhoe_t(jp_t  )
+                              rhoe_t(jp_t-1) =          wy   * wq + rhoe_t(jp_t-1)
+                              rhoe_t(jp_t  ) = (1.0d0 - wy ) * wq + rhoe_t(jp_t  )
                         end if
                   end do
                   !$acc loop vector
                   do j = (t-1)*ncells_t, t*ncells_t
-                        !$acc atomic update
-                        rhoe (j) = rhoe (j) + rhoe_t(j - (t-1)*ncells_t)
+                        jt = j - (t-1)*ncells_t
+                        if ( jt .eq. 0 .or. jt .eq. ncells_t ) then
+                              !$acc atomic update
+                              rhoe (j) = rhoe (j) + rhoe_t(jt)
+                        else
+                              rhoe (j) = rhoe (j) + rhoe_t(jt)
+                        end if
                   end do
             end do
             
@@ -852,7 +857,7 @@
             use part
             use rand
             implicit none
-            integer                    :: i, ie, ii, thread_num, jp, t, cc_tile
+            integer                    :: i, ie, ii, thread_num, jp, t, cc_tile, npe0, npi0
             integer                    :: local_n_transfer, local_n_receive, irem
             double precision           :: tB, tBB, duekteme, duektimi, vmod, ang
             double precision           :: vyea, vyeb, vyec, vzea, vzeb, vzec, wy, Eyp
@@ -1033,49 +1038,49 @@
       !******************************************************************************
       !******************************************************************************
 
-      ! subroutine resorting( n_elems, vec )
-      !       ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
-      !       integer*4, intent(in)                 :: n_elems
-      !       integer*4, dimension(:),intent(inout) :: vec        ! Vector to be resorted (in growing values)
-      !       ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
-      !       ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
-      !       integer*4                            :: ind, ind_min, min_value
-      !       ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
-      !       ! Loop over the components of the vector
-      !       do ind = 1, n_elems
-      !             call vec_minimum (ind, vec, n_elems, ind_min, min_value) ! This can be parallelized to improve performance
-      !             vec(ind_min) = vec(ind)
-      !             vec(ind) = min_value
-      !       end do
+      subroutine resorting( n_elems, vec )
+            ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
+            integer*4, intent(in)                 :: n_elems
+            integer*4, dimension(:),intent(inout) :: vec        ! Vector to be resorted (in growing values)
+            ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
+            ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
+            integer*4                            :: ind, ind_min, min_value
+            ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
+            ! Loop over the components of the vector
+            do ind = 1, n_elems
+                  call vec_minimum (ind, vec, n_elems, ind_min, min_value) ! This can be parallelized to improve performance
+                  vec(ind_min) = vec(ind)
+                  vec(ind) = min_value
+            end do
       
-      ! end subroutine resorting
+      end subroutine resorting
 
-      ! !******************************************************************************
-      ! !******************************************************************************
+      !******************************************************************************
+      !******************************************************************************
 
-      ! subroutine vec_minimum (ind, vec, n_elems, ind_min, min_value)
-      !       ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
-      !       integer*4, intent(in)                :: ind     ! Index, starting from which, the minimum has to be found
-      !       integer*4,dimension(:),intent(in)    :: vec     ! Vector whose minimum has to be found
-      !       integer*4, intent(in)                :: n_elems ! Number of elements in the vector
-      !       ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
-      !       integer*4, intent(out)               :: ind_min, min_value ! Index and value of the minimum element in the vector
-      !                                                       ! vec(ind:end)
-      !       ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
-      !       integer*4                            :: i
-      !       ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
-      !       ! Initialize the minimum value to that of the first component
-      !       min_value = vec(ind)
-      !       ind_min   = ind
-      !       ! Loop over the components of the vector
-      !       do i = ind, n_elems
-      !          if ( vec(i) .lt. min_value ) then
-      !              min_value = vec(i)
-      !              ind_min   = i
-      !          end if
-      !       end do
+      subroutine vec_minimum (ind, vec, n_elems, ind_min, min_value)
+            ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
+            integer*4, intent(in)                :: ind     ! Index, starting from which, the minimum has to be found
+            integer*4,dimension(:),intent(in)    :: vec     ! Vector whose minimum has to be found
+            integer*4, intent(in)                :: n_elems ! Number of elements in the vector
+            ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
+            integer*4, intent(out)               :: ind_min, min_value ! Index and value of the minimum element in the vector
+                                                            ! vec(ind:end)
+            ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
+            integer*4                            :: i
+            ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
+            ! Initialize the minimum value to that of the first component
+            min_value = vec(ind)
+            ind_min   = ind
+            ! Loop over the components of the vector
+            do i = ind, n_elems
+                  if ( vec(i) .lt. min_value ) then
+                        min_value = vec(i)
+                        ind_min   = i
+                  end if
+            end do
       
-      !   end subroutine vec_minimum
+      end subroutine vec_minimum
 
   
       !******************************************************************************
