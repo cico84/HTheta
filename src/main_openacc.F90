@@ -722,8 +722,9 @@
             use poi
             use part
             implicit none
-            integer          :: i, j, t, jp
+            integer          :: i, j, t, jp, jp_t
             double precision :: wy
+            double precision :: rhoe_t(0:ncells_t)
       
             ! Charge density initialization to 0
             !$acc parallel loop
@@ -732,19 +733,26 @@
                   rhoi(j) = 0.0d0
             end do
             
-            ! Electron charge deposition on the mesh points 
-            !$acc parallel loop
+            ! Electron charge deposition on the mesh points
+            
+            !$acc parallel loop private(rhoe_t)
             do t = 1, n_tiles
+                  rhoe_t = 0.d0
                   !$acc loop vector
                   do i = 1, npe(t)
                         ! Charge density weighting (linear weighting, CIC)
-                        jp             = int(ype(i,t) / dy) + 1         
+                        jp             = int(ype(i,t) / dy) + 1
+                        jp_t           = jp - (t - 1) * ncells_t
                         wy             = ( y(jp) - ype(i,t) ) / dy
-                        !$acc atomic update
-                        rhoe(jp-1) = wy*wq + rhoe(jp-1)
-                        !$acc atomic update
-                        rhoe(jp  ) = (1.0d0 - wy )*wq + rhoe(jp)
+                        if(jp_t > 0 .and. jp_t <= ncells_t)then
+                              !$acc atomic update
+                              rhoe_t(jp_t-1) =          wy  *wq + rhoe_t(jp_t-1)
+                              !$acc atomic update
+                              rhoe_t(jp_t  ) = (1.0d0 - wy )*wq + rhoe_t(jp_t  )
+                        end if
                   end do
+                  !$acc atomic update
+                  rhoe ((t-1)*ncells_t : t*ncells_t) = rhoe ((t-1)*ncells_t : t*ncells_t) + rhoe_t(0:ncells_t)
             end do
             
             ! Ion charge deposition on the mesh points 
