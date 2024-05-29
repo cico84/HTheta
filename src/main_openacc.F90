@@ -726,7 +726,7 @@
             implicit none
             integer            :: i, j, k, t, jp, jp_t, jt
             integer, parameter :: vectorlen = 128
-            double precision   :: rhoe_t(1:vectorlen,0:ncells_t)
+            double precision   :: rhoe_t(1:vectorlen,0:ncells_t), sum
 
             double precision :: wy
       
@@ -763,20 +763,31 @@
                         end do
                   end do
 
+                  ! !$acc loop vector
+                  ! do j = 0, ncells_t
+                  !       do k = 2, vectorlen
+                  !             rhoe_t(1, j) = rhoe_t(1, j) + rhoe_t(k, j) 
+                  !       end do
+                  ! end do
+                  ! do j = 1, ncells_t - 1
+                  !       rhoe( (t-1)*ncells_t + j ) = rhoe( (t-1)*ncells_t + j ) + rhoe_t(1, j)
+                  ! end do
+                  ! !$acc atomic update
+                  ! rhoe( (t-1)*ncells_t    ) = rhoe( (t-1)*ncells_t    ) + rhoe_t(1, j)
+                  ! !$acc atomic update
+                  ! rhoe( (t  )*ncells_t    ) = rhoe( (t  )*ncells_t    ) + rhoe_t(1, j)
+
                   !$acc loop vector
                   do j = 0, ncells_t
-                        do k = 2, vectorlen
-                              rhoe_t(1, j) = rhoe_t(1, j) + rhoe_t(k, j) 
+                        sum = 0.0d0
+                        !$acc loop vector reduction(+:sum)
+                        do k = 1, vectorlen
+                              sum = sum + rhoe_t(k,j)
                         end do
+                        !$acc atomic update
+                        rhoe((t-1)*ncells_t + j) = rhoe((t-1)*ncells_t + j) + sum
                   end do
 
-                  do j = 1, ncells_t - 1
-                        rhoe( (t-1)*ncells_t + j ) = rhoe( (t-1)*ncells_t + j ) + rhoe_t(1, j)
-                  end do
-                  !$acc atomic update
-                  rhoe( (t-1)*ncells_t    ) = rhoe( (t-1)*ncells_t    ) + rhoe_t(1, j)
-                  !$acc atomic update
-                  rhoe( (t  )*ncells_t    ) = rhoe( (t  )*ncells_t    ) + rhoe_t(1, j)
 
                   ! do i = 1, npe(t)
                   !       ! Charge density weighting (linear weighting, CIC)
