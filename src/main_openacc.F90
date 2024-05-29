@@ -724,7 +724,7 @@
             use poi
             use part
             implicit none
-            integer            :: i, j, t, jp, jp_t, jt
+            integer            :: i, j, k, t, jp, jp_t, jt
             integer, parameter :: vectorlen = 128
             double precision   :: rhoe_t(1:vectorlen,0:ncells_t)
 
