@@ -724,9 +724,11 @@
             use poi
             use part
             implicit none
-            integer          :: i, j, t, jp, jp_t, jt
+            integer            :: i, j, t, jp, jp_t, jt
+            integer, parameter :: vectorlen = 128
+            double precision   :: rhoe_t(1:vectorlen,0:ncells_t)
+
             double precision :: wy
-            double precision :: rhoe_t(0:10)
       
             ! Charge density initialization to 0
             !$acc parallel loop
@@ -736,33 +738,104 @@
             end do
             
             ! Electron charge deposition on the mesh points
-            !$acc parallel loop private(rhoe_t) present(ype, npe, y, rhoe)
+
+            !$acc parallel loop vector_length(vectorlen) private(rhoe_t) present(ype, npe, y, rhoe)
             do t = 1, n_tiles
-                  !$acc cache(rhoe_t)
                   rhoe_t = 0.d0
-                  !$acc loop vector
-                  do i = 1, npe(t)
-                        ! Charge density weighting (linear weighting, CIC)
-                        jp             = int(ype(i,t) / dy) + 1
-                        jp_t           = jp - (t - 1) * ncells_t
-                        wy             = ( y(jp) - ype(i,t) ) / dy
-                        if(jp_t > 0 .and. jp_t <= ncells_t)then
-                              rhoe_t(jp_t-1) =          wy   * wq + rhoe_t(jp_t-1)
-                              rhoe_t(jp_t  ) = (1.0d0 - wy ) * wq + rhoe_t(jp_t  )
-                        end if
+                  !$acc loop vector collapse(2)
+                  do i = 1, npe(t), vectorlen 
+                        do k = 1, vectorlen
+                              if ( i + k < npe(t) ) then
+                                    ! Charge density weighting (linear weighting, CIC)
+                                    jp             = int(ype(i,t) / dy) + 1
+                                    !jp_t           = jp - (t - 1) * ncells_t
+                                    wy             = ( y(jp) - ype(i,t) ) / dy
+                                    !if ( jp_t > 0 .and. jp_t <= ncells_t ) then
+                                    !      rhoe_t (k, jp_t-1) = rhoe_t(jp_t-1) +          wy   * wq 
+                                    !      rhoe_t (k, jp_t  ) = rhoe_t(jp_t  ) + (1.0d0 - wy ) * wq 
+                                    !end if
+                                    rhoe_t(k, mod(i,ncells_t)  ) = rhoe_t(k, mod(i,ncells_t)  ) + (1.0d0 - wy ) * wq
+                                    rhoe_t(k, mod(i,ncells_t)+1) = rhoe_t(k, mod(i,ncells_t)+1) +          wy   * wq
+                                    
+                              end if
+                        end do
                   end do
+
                   !$acc loop vector
-                  do j = (t-1)*ncells_t, t*ncells_t
-                        jt = j - (t-1)*ncells_t
-                        if ( jt .eq. 0 .or. jt .eq. ncells_t ) then
-                              !$acc atomic update
-                              rhoe (j) = rhoe (j) + rhoe_t(jt)
-                        else
-                              rhoe (j) = rhoe (j) + rhoe_t(jt)
-                        end if
+                  do j = 0, ncells_t
+                        do k = 2, vectorlen
+                              rhoe_t(1, j) = rhoe_t(1, j) + rhoe_t(k, j) 
+                        end do
                   end do
+
+                  do j = 1, ncells_t - 1
+                        rhoe( (t-1)*ncells_t + j ) = rhoe( (t-1)*ncells_t + j ) + rhoe_t(1, j)
+                  end do
+                  !$acc atomic update
+                  rhoe( (t-1)*ncells_t    ) = rhoe( (t-1)*ncells_t    ) + rhoe_t(1, j)
+                  !$acc atomic update
+                  rhoe( (t  )*ncells_t    ) = rhoe( (t  )*ncells_t    ) + rhoe_t(1, j)
+
+                  ! do i = 1, npe(t)
+                  !       ! Charge density weighting (linear weighting, CIC)
+                  !       jp             = int(ype(i,t) / dy) + 1
+                  !       jp_t           = jp - (t - 1) * ncells_t
+                  !       wy             = ( y(jp) - ype(i,t) ) / dy
+                  !       if(jp_t > 0 .and. jp_t <= ncells_t)then
+                  !             rhoe_t(jp_t-1) =          wy   * wq + rhoe_t(jp_t-1)
+                  !             rhoe_t(jp_t  ) = (1.0d0 - wy ) * wq + rhoe_t(jp_t  )
+                  !       end if
+                  ! end do
+                  ! !$acc loop vector
+                  ! do j = (t-1)*ncells_t, t*ncells_t
+                  !       jt = j - (t-1)*ncells_t
+                  !       if ( jt .eq. 0 .or. jt .eq. ncells_t ) then
+                  !             !$acc atomic update
+                  !             rhoe (j) = rhoe (j) + rhoe_t(jt)
+                  !       else
+                  !             rhoe (j) = rhoe (j) + rhoe_t(jt)
+                  !       end if
+                  ! end do
             end do
-            
+
+            ! program main
+            !       integer, parameter:: vectorlen=128, cells_per_tile=10, total_cells=1000
+            !       integer rhoe_t(vectorlen,cells_per_tile), rhoe(total_cells), npe(1000)
+            !       npe=100000
+            !       !$acc parallel loop vector_length(vectorlen) private(rhoe_t)
+            !       do i=1,1000
+            !          rhoe_t = 0
+            !          !$acc loop vector collapse(2)
+            !          do j=1,npe(i),vectorlen 
+            !             do k=1,vectorlen
+            !                if ( j+k < npe(i) ) then
+            !                   rhoe_t(k,mod(j,10)+1) = rhoe_t(k,mod(j,10)+1) +i
+            !                endif
+            !             end do
+            !          end do
+            !          !$acc loop vector
+            !          do j=1,cells_per_tile
+            !             do k=2,vectorlen
+            !                rhoe_t(1,j) = rhoe_t(k,j)+rhoe_t(1,j)
+            !             enddo
+            !          enddo
+            !          do j=1,10
+            !             !$acc atomic update
+            !             rhoe(i) = rhoe(i)+rhoe_t(1,j)
+            !          end do
+            !       enddo
+                
+            !       !$acc parallel loop vector_length(vectorlen) private(rhoe_t)
+            !       do i=1,1000
+            !       !$acc loop vector 
+            !          do j=1,128000
+            !             !$acc atomic update
+            !             rhoe(mod(j,1000)+1) =  rhoe(mod(j,1000)+1) +1
+            !          enddo
+            !       enddo
+            !       print*,rhoe(3)
+            !     end program main
+
             ! Ion charge deposition on the mesh points 
             !$acc parallel loop
             do t = 1, n_tiles
