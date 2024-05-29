@@ -745,11 +745,13 @@
                   !$acc loop vector collapse(2)
                   do i = 1, npe(t), vectorlen 
                         do k = 1, vectorlen
-                              if ( i + k < npe(t) ) then
+                              ! Particle index in tile is " i + k - 1 ". For i = 1, k = 1, you have index 1
+                              ! For i = 1, k = 128, you have index 128, for i = 129, k = 1, you have index 129
+                              if ( i + k - 1 < npe(t) ) then
                                     ! Charge density weighting (linear weighting, CIC)
-                                    jp             = int(ype(i,t) / dy) + 1
+                                    jp             = int(ype(i+k-1,t) / dy) + 1
                                     !jp_t           = jp - (t - 1) * ncells_t
-                                    wy             = ( y(jp) - ype(i,t) ) / dy
+                                    wy             = ( y(jp) - ype(i+k-1,t) ) / dy
                                     !if ( jp_t > 0 .and. jp_t <= ncells_t ) then
                                     !      rhoe_t (k, jp_t-1) = rhoe_t(jp_t-1) +          wy   * wq 
                                     !      rhoe_t (k, jp_t  ) = rhoe_t(jp_t  ) + (1.0d0 - wy ) * wq 
