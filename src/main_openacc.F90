@@ -944,7 +944,7 @@
             ! Remove particles that have left each tile (for electrons)
             !$acc parallel loop 
             do t = 1, n_tiles
-                  call resorting( n_transfer(t), tile_transfer_data  (1:n_transfer(t), t) )
+                  !call resorting( n_transfer(t), tile_transfer_data  (1:n_transfer(t), t) )
                   !$acc loop seq
                   do i = n_transfer(t), -1, 1
                         irem = tile_transfer_data  (i, t)
@@ -1033,49 +1033,49 @@
       !******************************************************************************
       !******************************************************************************
 
-      subroutine resorting( n_elems, vec )
-            ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
-            integer*4, intent(in)                 :: n_elems
-            integer*4, dimension(:),intent(inout) :: vec        ! Vector to be resorted (in growing values)
-            ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
-            ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
-            integer*4                            :: ind, ind_min, min_value
-            ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
-            ! Loop over the components of the vector
-            do ind = 1, n_elems
-                  call vec_minimum (ind, vec, n_elems, ind_min, min_value) ! This can be parallelized to improve performance
-                  vec(ind_min) = vec(ind)
-                  vec(ind) = min_value
-            end do
+      ! subroutine resorting( n_elems, vec )
+      !       ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
+      !       integer*4, intent(in)                 :: n_elems
+      !       integer*4, dimension(:),intent(inout) :: vec        ! Vector to be resorted (in growing values)
+      !       ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
+      !       ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
+      !       integer*4                            :: ind, ind_min, min_value
+      !       ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
+      !       ! Loop over the components of the vector
+      !       do ind = 1, n_elems
+      !             call vec_minimum (ind, vec, n_elems, ind_min, min_value) ! This can be parallelized to improve performance
+      !             vec(ind_min) = vec(ind)
+      !             vec(ind) = min_value
+      !       end do
       
-      end subroutine resorting
+      ! end subroutine resorting
 
-      !******************************************************************************
-      !******************************************************************************
+      ! !******************************************************************************
+      ! !******************************************************************************
 
-      subroutine vec_minimum (ind, vec, n_elems, ind_min, min_value)
-            ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
-            integer*4, intent(in)                :: ind     ! Index, starting from which, the minimum has to be found
-            integer*4,dimension(:),intent(in)    :: vec     ! Vector whose minimum has to be found
-            integer*4, intent(in)                :: n_elems ! Number of elements in the vector
-            ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
-            integer*4, intent(out)               :: ind_min, min_value ! Index and value of the minimum element in the vector
-                                                            ! vec(ind:end)
-            ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
-            integer*4                            :: i
-            ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
-            ! Initialize the minimum value to that of the first component
-            min_value = vec(ind)
-            ind_min   = ind
-            ! Loop over the components of the vector
-            do i = ind, n_elems
-               if ( vec(i) .lt. min_value ) then
-                   min_value = vec(i)
-                   ind_min   = i
-               end if
-            end do
+      ! subroutine vec_minimum (ind, vec, n_elems, ind_min, min_value)
+      !       ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
+      !       integer*4, intent(in)                :: ind     ! Index, starting from which, the minimum has to be found
+      !       integer*4,dimension(:),intent(in)    :: vec     ! Vector whose minimum has to be found
+      !       integer*4, intent(in)                :: n_elems ! Number of elements in the vector
+      !       ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
+      !       integer*4, intent(out)               :: ind_min, min_value ! Index and value of the minimum element in the vector
+      !                                                       ! vec(ind:end)
+      !       ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
+      !       integer*4                            :: i
+      !       ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
+      !       ! Initialize the minimum value to that of the first component
+      !       min_value = vec(ind)
+      !       ind_min   = ind
+      !       ! Loop over the components of the vector
+      !       do i = ind, n_elems
+      !          if ( vec(i) .lt. min_value ) then
+      !              min_value = vec(i)
+      !              ind_min   = i
+      !          end if
+      !       end do
       
-        end subroutine vec_minimum
+      !   end subroutine vec_minimum
 
   
       !******************************************************************************
