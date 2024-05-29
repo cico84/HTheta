@@ -739,18 +739,15 @@
             
             !$acc parallel loop private(rhoe_t)
             do t = 1, n_tiles
-                  !$acc cache(rhoe_t(0:ncells_t))
                   rhoe_t = 0.d0
-                  !$acc loop vector
+                  !$acc loop vector reduction(+: rhoe_t)
                   do i = 1, npe(t)
                         ! Charge density weighting (linear weighting, CIC)
                         jp             = int(ype(i,t) / dy) + 1
                         jp_t           = jp - (t - 1) * ncells_t
                         wy             = ( y(jp) - ype(i,t) ) / dy
                         if(jp_t > 0 .and. jp_t <= ncells_t)then
-                              !$acc atomic update
                               rhoe_t(jp_t-1) =          wy  *wq + rhoe_t(jp_t-1)
-                              !$acc atomic update
                               rhoe_t(jp_t  ) = (1.0d0 - wy )*wq + rhoe_t(jp_t  )
                         end if
                   end do
@@ -947,22 +944,22 @@
             ! Remove particles that have left each tile (for electrons)
             !$acc parallel loop 
             do t = 1, n_tiles
-                  !$acc serial
+                  !$acc loop seq
                   do i = 1, n_transfer(t)
-                        irem = tile_transfer_data (i, t)
-                        ype (irem, t) = ype  (npe(t), t)
-                        zpe (irem, t) = zpe  (npe(t), t)
-                        vxpe(irem, t) = vxpe (npe(t), t)
-                        vype(irem, t) = vype (npe(t), t)
-                        vzpe(irem, t) = vzpe (npe(t), t)
-                        npe (      t) = npe  (        t) - 1
+                        irem = tile_transfer_data  (i, t)
+                        ype  (irem, t) = ype  (npe(t), t)
+                        zpe  (irem, t) = zpe  (npe(t), t)
+                        vxpe (irem, t) = vxpe (npe(t), t)
+                        vype (irem, t) = vype (npe(t), t)
+                        vzpe (irem, t) = vzpe (npe(t), t)
+                        npe  (      t) = npe  (        t) - 1
                   end do
             end do
 
             ! Add particles to each tile
             !$acc parallel loop
             do t = 1, n_tiles
-                  !$acc serial
+                  !$acc loop seq
                   do i = 1, n_receive(t)
                         ype (npe(t)+1, t) = tile_receive_data (1, i, t) 
                         zpe (npe(t)+1, t) = tile_receive_data (2, i, t) 
@@ -1033,6 +1030,22 @@
       !******************************************************************************
       !******************************************************************************
 
+      ! subroutine resorting( n_elems, vec )
+      !       ! ----------------------------------------------- INPUTS/OUTPUTS  -----------------------------------------------------
+      !       integer*4, intent(in)                :: n_elems
+      !       integer*4,dimension(:),intent(inout) :: vec        ! Vector to be resorted (in growing values)
+      !       ! --------------------------------------------------- OUTPUTS ---------------------------------------------------------
+      !       ! ---------------------------------------------- INTERNAL VARIABLES ---------------------------------------------------
+      !       integer*4                            :: ind, ind_min, min_value
+      !       ! -------------------------------------- EXECUTABLE PART OF THE SUBROUTINE --------------------------------------------
+      !       ! Loop over the components of the vector
+      !       do ind = 1, n_elems
+      !             call vec_minimum (ind, vec, n_elems, ind_min, min_value)      ! This can be parallelized to improve performance
+      !             vec(ind_min) = vec(ind)
+      !             vec(ind) = min_value
+      !       end do
+      
+      ! end subroutine resorting
   
       !******************************************************************************
       !*                                                                            *
