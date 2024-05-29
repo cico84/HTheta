@@ -932,15 +932,14 @@
                   end do
             end do
     
-            ! Modify the particles list of each tile (for electrons)
-            !$acc parallel loop vector_length(256)
-            do t = 1, n_tiles
-                  !$acc loop vector
-                  do i = 1, n_transfer(t)
+            ! ! Modify the particles list of each tile (for electrons)
+            ! !$acc parallel loop vector_length(256)
+            ! do t = 1, n_tiles
+            !       !$acc loop vector
+            !       do i = 1, n_transfer(t)
 
-                  end do
-            end do
-
+            !       end do
+            ! end do
 
             !$acc parallel loop
             do t = 1, n_tiles
