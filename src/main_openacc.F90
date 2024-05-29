@@ -726,7 +726,7 @@
             implicit none
             integer          :: i, j, t, jp, jp_t
             double precision :: wy
-            double precision :: rhoe_t(0:ncells_t)
+            double precision :: rhoe_t(0:10)
       
             ! Charge density initialization to 0
             !$acc parallel loop
@@ -736,7 +736,6 @@
             end do
             
             ! Electron charge deposition on the mesh points
-            
             !$acc parallel loop private(rhoe_t)
             do t = 1, n_tiles
                   !$acc cache(rhoe_t)
