@@ -182,8 +182,10 @@
             integer            :: npmax, npmax_t, npic, ncells_t
             integer, parameter :: n_tiles = 500
             integer 		 :: npe(1:n_tiles), npi(1:n_tiles)
-            integer, allocatable, dimension(:,:,:)        :: tile_transfer_data ! 2D array containing IDs of particles changing tile
-            integer, allocatable, dimension(:  )          :: n_transfer         ! 1D array containing number of particles that have changed tile per tile
+            integer, allocatable, dimension(:,:)            :: tile_transfer_data ! 2D array containing IDs of particles changing tile
+            double precision, allocatable, dimension(:,:,:) :: tile_receive_data  ! 2D array containing the position and velocity of particles changing tile
+            integer, allocatable, dimension(:  )            :: n_transfer         ! 1D array containing number of particles that have left each tile
+            integer, allocatable, dimension(:  )            :: n_receive          ! 1D array containing number of particles that have entered each tile
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:,:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:,:) :: ypi, zpi, vxpi, vypi, vzpi
@@ -352,7 +354,8 @@
             !$acc enter data copyin( vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles), vxpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  npe(1:n_tiles), npi(1:n_tiles), ymin_t(1:n_tiles), ymax_t(1:n_tiles) )
-            !$acc enter data copyin(   n_transfer(1:n_tiles), tile_transfer_data(1:npmax_t/ncells_t,1:2,1:n_tiles) )
+            !$acc enter data copyin(   n_transfer(1:n_tiles), tile_transfer_data(    1:npmax_t/ncells_t,1:n_tiles) )
+            !$acc enter data copyin(   n_receive (1:n_tiles), tile_receive_data (1:5,1:npmax_t/ncells_t,1:n_tiles) )
             do ipic = 1, npic
                   
                   call system_clock(t0)
@@ -397,11 +400,6 @@
 
                   call system_clock(t3)
                   time_push = dble(t3 - t2) / dble(nticks_sec)
-
-                  !call nvtxStartRange('TILES')
-                  ! Update macro-particles positions and velocities
-                  !call push
-                  !call nvtxEndRange
 
                   ! Diagnostics: averaged energy and mobility
                   Ee_ave = 0.0d0
@@ -450,8 +448,8 @@
             !$acc exit data copyout(   ype(1:npmax_t, 1:n_tiles),  zpe(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(  vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(   ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
-            !$acc exit data copyout(   n_transfer(1:n_tiles), tile_transfer_data(1:npmax_t/ncells_t,1:2,1:n_tiles) )
-
+            !$acc exit data copyout(   n_transfer(1:n_tiles), tile_transfer_data(    1:npmax_t/ncells_t,1:n_tiles) )
+            !$acc exit data copyout(   n_receive (1:n_tiles), tile_receive_data (1:5,1:npmax_t/ncells_t,1:n_tiles) )
             !******************************************************************************
             !******************************************************************************
 
@@ -565,8 +563,10 @@
             allocate( ymin_t(1:n_tiles) )
             allocate( ymax_t(1:n_tiles) )
 
-            allocate( tile_transfer_data(1:npmax_t/ncells_t, 2, 1:n_tiles ) )
-            allocate( n_transfer        (1:n_tiles)                         )
+            allocate( tile_transfer_data (   1:npmax_t/ncells_t, 1:n_tiles ) )
+            allocate( tile_receive_data  (5, 1:npmax_t/ncells_t, 1:n_tiles ) )
+            allocate( n_transfer         (1:n_tiles)                         )
+            allocate( n_receive          (1:n_tiles)                         )
 
             ! Datasets from 1 to npmax and 1 to n_tiles
             allocate(  ype(1:npmax_t, 1:n_tiles) ) 
@@ -767,12 +767,12 @@
                   !$acc loop vector
                   do i = 1, npi(t)      
                         ! Charge density weighting (linear weighting, CIC) 
-                        jp             = int(ypi(i,t) / dy) + 1         
+                        jp             = int(ypi(i,t) / dy) + 1 
                         wy             = ( y(jp) - ypi(i,t) ) / dy
                         !$acc atomic update   
                         rhoi(jp-1) = wy*wq + rhoi(jp-1)
                         !$acc atomic update
-                        rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)                   
+                        rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)
                   end do
             end do
 
@@ -855,9 +855,10 @@
             use part
             use rand
             implicit none
-            integer                    :: i,ie,ii,thread_num,jp,t,cc_tile,local_n_transfer
-            double precision           :: tB,tBB,duekteme,duektimi,vmod,ang
-            double precision           :: vyea,vyeb,vyec,vzea,vzeb,vzec,wy,Eyp
+            integer                    :: i, ie, ii, thread_num, jp, t, cc_tile
+            integer                    :: local_n_transfer, local_n_receive, irem
+            double precision           :: tB, tBB, duekteme, duektimi, vmod, ang
+            double precision           :: vyea, vyeb, vyec, vzea, vzeb, vzec, wy, Eyp
             double precision, external :: ran2
 
             ! Leapfrog method (Boris algorithm)
@@ -870,6 +871,7 @@
             !$acc parallel loop
             do t = 1, n_tiles
                   n_transfer (t) = 0
+                  n_receive  (t) = 0
             end do
 
             ! Electrons loop
@@ -930,23 +932,51 @@
                               n_transfer (t)   = n_transfer (t) + 1
                               local_n_transfer = n_transfer (t)
                               !$acc end atomic
-                              tile_transfer_data(local_n_transfer, 1:2, t) = (/i,cc_tile/)
+                              tile_transfer_data  (local_n_transfer, t) = i
+
+                              !$acc atomic capture
+                              n_receive (cc_tile) = n_receive (cc_tile) + 1
+                              local_n_receive     = n_receive (cc_tile)
+                              !$acc end atomic
+                              tile_receive_data   (1:5, local_n_receive, cc_tile) = &
+                              (/ype(i,t), zpe(i,t), vxpe(i,t), vype(i,t), vzpe(i,t)/)
                         end if
                   end do
             end do
-    
-            ! ! Modify the particles list of each tile (for electrons)
-            ! !$acc parallel loop vector_length(256)
-            ! do t = 1, n_tiles
-            !       !$acc loop vector
-            !       do i = 1, n_transfer(t)
 
-            !       end do
-            ! end do
+            ! Remove particles that have left each tile (for electrons)
+            !$acc parallel loop 
+            do t = 1, n_tiles
+                  !$acc serial
+                  do i = 1, n_transfer(t)
+                        irem = tile_transfer_data (i, t)
+                        ype (irem, t) = ype  (npe(t), t)
+                        zpe (irem, t) = zpe  (npe(t), t)
+                        vxpe(irem, t) = vxpe (npe(t), t)
+                        vype(irem, t) = vype (npe(t), t)
+                        vzpe(irem, t) = vzpe (npe(t), t)
+                        npe (      t) = npe  (        t) - 1
+                  end do
+            end do
+
+            ! Add particles to each tile
+            !$acc parallel loop
+            do t = 1, n_tiles
+                  !$acc serial
+                  do i = 1, n_receive(t)
+                        ype (npe(t)+1, t) = tile_receive_data (1, i, t) 
+                        zpe (npe(t)+1, t) = tile_receive_data (2, i, t) 
+                        vxpe(npe(t)+1, t) = tile_receive_data (3, i, t) 
+                        vype(npe(t)+1, t) = tile_receive_data (4, i, t) 
+                        vzpe(npe(t)+1, t) = tile_receive_data (5, i, t) 
+                        npe (          t) = npe               (      t) + 1
+                  end do
+            end do
 
             !$acc parallel loop
             do t = 1, n_tiles
                   n_transfer (t) = 0
+                  n_receive  (t) = 0
             end do
 
             ! Ions loop
@@ -989,15 +1019,6 @@
                         !         vypi(i)=vmod*DCOS(ang) 
                         !         vzpi(i)=vmod*DSIN(ang)
                         !   end if
-                        ! Determine particles that have left the tile
-                        cc_tile = min( floor( ( ypi (i,t) - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
-                        if ( cc_tile .ne. t ) then
-                              !$acc atomic capture
-                              n_transfer (t)   = n_transfer (t) + 1
-                              local_n_transfer = n_transfer (t)
-                              !$acc end atomic
-                              tile_transfer_data(local_n_transfer, 1:2, t) = (/i,cc_tile/)
-                        end if
                   end do
             end do
 
