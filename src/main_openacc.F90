@@ -750,14 +750,14 @@
                               if ( i + k - 1 < npe(t) ) then
                                     ! Charge density weighting (linear weighting, CIC)
                                     jp             = int(ype(i+k-1,t) / dy) + 1
-                                    !jp_t           = jp - (t - 1) * ncells_t
+                                    jp_t           = jp - (t - 1) * ncells_t
                                     wy             = ( y(jp) - ype(i+k-1,t) ) / dy
                                     !if ( jp_t > 0 .and. jp_t <= ncells_t ) then
                                     !      rhoe_t (k, jp_t-1) = rhoe_t(jp_t-1) +          wy   * wq 
                                     !      rhoe_t (k, jp_t  ) = rhoe_t(jp_t  ) + (1.0d0 - wy ) * wq 
                                     !end if
-                                    rhoe_t(k, mod(i,ncells_t)  ) = rhoe_t(k, mod(i,ncells_t)  ) + (1.0d0 - wy ) * wq
-                                    rhoe_t(k, mod(i,ncells_t)+1) = rhoe_t(k, mod(i,ncells_t)+1) +          wy   * wq
+                                    rhoe_t(k, jp_t    ) = rhoe_t(k, jp_t    ) + (1.0d0 - wy ) * wq
+                                    rhoe_t(k, jp_t + 1) = rhoe_t(k, jp_t + 1) +          wy   * wq
                                     
                               end if
                         end do
