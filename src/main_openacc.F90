@@ -352,6 +352,7 @@
             !$acc enter data copyin( vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles), vxpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  npe(1:n_tiles), npi(1:n_tiles), ymin_t(1:n_tiles), ymax_t(1:n_tiles) )
+            !$acc enter data copyin(   n_transfer(1:n_tiles), tile_transfer_data(1:npmax_t/ncells_t,1:2,1:n_tiles) )
             do ipic = 1, npic
                   
                   call system_clock(t0)
@@ -449,6 +450,7 @@
             !$acc exit data copyout(   ype(1:npmax_t, 1:n_tiles),  zpe(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(  vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(   ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
+            !$acc exit data copyout(   n_transfer(1:n_tiles), tile_transfer_data(1:npmax_t/ncells_t,1:2,1:n_tiles) )
 
             !******************************************************************************
             !******************************************************************************
