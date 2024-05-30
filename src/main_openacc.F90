@@ -727,6 +727,7 @@
      
             use poi
             use part
+            use diagn
             implicit none
             integer            :: i, j, k, t, jp, jp_t, jt
             integer, parameter :: vectorlen = 128
