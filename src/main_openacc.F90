@@ -833,21 +833,6 @@
 
             end do
 
-            ! ! Ion charge deposition on the mesh points 
-            ! !$acc parallel loop
-            ! do t = 1, n_tiles
-            !       !$acc loop vector
-            !       do i = 1, npi(t)      
-            !             ! Charge density weighting (linear weighting, CIC) 
-            !             jp             = int(ypi(i,t) / dy) + 1 
-            !             wy             = ( y(jp) - ypi(i,t) ) / dy
-            !             !$acc atomic update   
-            !             rhoi(jp-1) = wy*wq + rhoi(jp-1)
-            !             !$acc atomic update
-            !             rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)
-            !       end do
-            ! end do
-
             ! Periodic boundary conditions for both ion and electron charge density
             !$acc serial
             rhoe(0)  = rhoe(0) + rhoe(ny)   
@@ -997,67 +982,8 @@
                         !         vzpe(i)=vmod*DSIN(ang)
                         !   end if
                         !
-!                        ! Determine particles that have left the tile
-!                        cc_tile = min( floor( ( ype (i,t) - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
-! #if 0
-!                         if ( cc_tile .ne. t ) then
-!                               !$acc atomic capture
-!                               n_transfer (t)   = n_transfer (t) + 1
-!                               local_n_transfer = n_transfer (t)
-!                               !$acc end atomic
-!                               tile_transfer_data  (local_n_transfer, t) = i
-
-!                               !$acc atomic capture
-!                               n_receive (cc_tile) = n_receive (cc_tile) + 1
-!                               local_n_receive     = n_receive (cc_tile)
-!                               !$acc end atomic
-!                               tile_receive_data   (1:5, local_n_receive, cc_tile) = &
-!                               (/ype(i,t), zpe(i,t), vxpe(i,t), vype(i,t), vzpe(i,t)/)
-!                         end if
-! #endif
                   end do
             end do
-
-!#if 0
-!             ! Remove particles that have left each tile (for electrons)
-!             !$acc parallel loop 
-!             do t = 1, n_tiles
-!                   !call resorting( n_transfer(t), tile_transfer_data  (1:n_transfer(t), t) )
-!                   !$acc loop seq
-!                   do i = n_transfer(t), -1, 1
-!                         irem = tile_transfer_data  (i, t)
-!                         if ( irem .ne. npe  (t) ) then
-!                               ype  (irem, t) = ype  (npe(t), t)
-!                               zpe  (irem, t) = zpe  (npe(t), t)
-!                               vxpe (irem, t) = vxpe (npe(t), t)
-!                               vype (irem, t) = vype (npe(t), t)
-!                               vzpe (irem, t) = vzpe (npe(t), t)
-!                         end if
-!                         npe  (t) = npe  (t) - 1
-!                   end do
-!             end do
-
-!             ! Add particles to each tile
-!             !$acc parallel loop
-!             do t = 1, n_tiles
-!                   !$acc loop seq
-!                   do i = 1, n_receive(t)
-!                         ype (npe(t)+1, t) = tile_receive_data (1, i, t) 
-!                         zpe (npe(t)+1, t) = tile_receive_data (2, i, t) 
-!                         vxpe(npe(t)+1, t) = tile_receive_data (3, i, t) 
-!                         vype(npe(t)+1, t) = tile_receive_data (4, i, t) 
-!                         vzpe(npe(t)+1, t) = tile_receive_data (5, i, t) 
-!                         npe (          t) = npe               (      t) + 1
-!                   end do
-!             end do
-
-!             !$acc parallel loop
-!             do t = 1, n_tiles
-!                   n_transfer (t) = 0
-!                   n_receive  (t) = 0
-!             end do
-! #endif
-
 
             ! Ions loop
             !$acc parallel loop
