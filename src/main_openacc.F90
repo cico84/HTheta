@@ -452,6 +452,7 @@
             !$acc exit data copyout(   ype(1:npmax_t, 1:n_tiles),  zpe(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(  vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(   ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
+            !$acc exit data copyout(  tmp(1:npmax_t, 1:n_tiles), dest(1:npmax_t, 1:n_tiles,1:2), tmpc(1:n_tiles))
             !******************************************************************************
             !******************************************************************************
 
@@ -855,11 +856,25 @@
 
             end do
 
+            ! Periodic boundary conditions for both ion and electron charge density
+            !$acc serial
+            rhoe(0)  = rhoe(0) + rhoe(ny)   
+            rhoe(ny) = rhoe(0)
+            rhoi(0)  = rhoi(0) + rhoi(ny)   
+            rhoi(ny) = rhoi(0)
+            !$acc end serial
 
+            !$acc parallel loop
+            do j = 0, ny
+                  rhoe(j) = rhoe(j) / vol(j)
+                  rhoi(j) = rhoi(j) / vol(j)
+            end do
+
+            ! Correcting particle tiles (if needed)
             if ( dble(npe_out_of_tile)/dble(npinit) > 0.1) then
                !$acc parallel loop 
                do i=1,n_tiles
-                  tmpc(i)=0
+                  tmpc(i) = 0
                end do
                !$acc parallel loop present(dest)
                do t = 1, n_tiles
@@ -875,20 +890,20 @@
                   enddo
                enddo
                !$acc parallel loop
-               do i=1,n_tiles
-                  if (tmpc(i) > npmax_t) print*,"too many cells in tile"
-               end do
-               print*,"calling swap"
+            !    do i=1,n_tiles
+            !       if (tmpc(i) > npmax_t) print*,"too many particles in tile"
+            !    end do
+            !   print*,"calling swap"
                call swap(ype, tmp, dest, npe, tmpc)
-               !$acc parallel loop present(dest)
-               do t = 1, n_tiles
-                  !$acc loop vector 
-                  do i = 1, tmpc(t)
-                     jp             = int(ype(i,t) / dy) + 1
-                     d = (jp-1)/ncells_t+1                     
-                     if (d .ne. t) print*,"moved to wrong pos"
-                  enddo
-               enddo
+            !    !$acc parallel loop present(dest)
+            !    do t = 1, n_tiles
+            !       !$acc loop vector 
+            !       do i = 1, tmpc(t)
+            !          jp             = int(ype(i,t) / dy) + 1
+            !          d = (jp-1)/ncells_t+1                     
+            !          if (d .ne. t) print*,"moved to wrong pos"
+            !       enddo
+            !    enddo
                call swap(zpe, tmp, dest, npe, tmpc)
                call swap(vxpe, tmp, dest, npe, tmpc)
                call swap(vype, tmp, dest, npe, tmpc)
@@ -901,21 +916,51 @@
 
             end if
 
-            
-            
-            ! Periodic boundary conditions for both ion and electron charge density
-            !$acc serial
-            rhoe(0)  = rhoe(0) + rhoe(ny)   
-            rhoe(ny) = rhoe(0)
-            rhoi(0)  = rhoi(0) + rhoi(ny)   
-            rhoi(ny) = rhoi(0)
-            !$acc end serial
-
-            !$acc parallel loop
-            do j = 0, ny
-                  rhoe(j) = rhoe(j) / vol(j)
-                  rhoi(j) = rhoi(j) / vol(j)
-            end do
+            ! Correcting particle tiles (if needed)
+            if ( dble(npi_out_of_tile)/dble(npinit) > 0.1) then
+                  !$acc parallel loop 
+                  do i = 1,n_tiles
+                     tmpc(i)=0
+                  end do
+                  !$acc parallel loop present(dest)
+                  do t = 1, n_tiles
+                     !$acc loop vector 
+                     do i = 1, npi(t)
+                        jp             = int(ypi(i,t) / dy) + 1
+                        d = (jp-1)/ncells_t+1                     
+                        dest(i,t,1) = d
+                        !$acc atomic capture
+                        tmpc(d) = tmpc(d)+1
+                        dest(i,t,2) = tmpc(d)
+                        !$acc end atomic
+                     enddo
+                  enddo
+                  !$acc parallel loop
+                  !do i=1,n_tiles
+                  !   if (tmpc(i) > npmax_t) print*,"too many particles in tile"
+                  !end do
+                  !print*,"calling swap"
+                  call swap(ypi, tmp, dest, npi, tmpc)
+                  !!$acc parallel loop present(dest)
+                  ! do t = 1, n_tiles
+                  !    !$acc loop vector 
+                  !    do i = 1, tmpc(t)
+                  !       jp             = int(ype(i,t) / dy) + 1
+                  !       d = (jp-1)/ncells_t+1                     
+                  !       if (d .ne. t) print*,"moved to wrong pos"
+                  !    enddo
+                  ! enddo
+                  call swap(zpi, tmp, dest, npi, tmpc)
+                  call swap(vxpi, tmp, dest, npi, tmpc)
+                  call swap(vypi, tmp, dest, npi, tmpc)
+                  call swap(vzpi, tmp, dest, npi, tmpc)
+   
+                  !$acc parallel loop
+                  do i = 1,n_tiles
+                     npi(i)=tmpc(i)
+                  end do
+   
+               end if
 
             return
 
