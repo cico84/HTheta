@@ -435,7 +435,8 @@
                   if ( mod(ipic,1) .eq. 0 ) then
                         !$acc wait(3)
                         write(11,101) ipic*dt, Ee_ave, Ei_ave, mob, phi(ny/2), Ey(ny/2), rhoe(ny/2)/q, rhoi(ny/2)/q
-                        write(12,102) time_scatter, time_poisson, time_push, time_othr, npe_out_of_tile/npinit, npi_out_of_tile/npinit
+                        write(12,102) time_scatter, time_poisson, time_push, time_othr, &
+                                      dble(npe_out_of_tile)/dble(npinit), dble(npi_out_of_tile)/dble(npinit)
                   end if
 
                   call system_clock(t5)
