@@ -761,8 +761,8 @@
                                     wy             = ( y(jp) - ype(i+k-1,t) ) / dy
 
                                     if ( jp_t > 0 .and. jp_t <= ncells_t ) then
-                                          rhoe_t(mod(k,32), jp_t    ) = rhoe_t(mod(k,32), jp_t    ) + (1.0d0 - wy ) * wq
-                                          rhoe_t(mod(k,32), jp_t - 1) = rhoe_t(mod(k,32), jp_t - 1) +          wy   * wq
+                                          rhoe_t(mod(k-1,32)+1, jp_t    ) = rhoe_t(mod(k-1,32)+1, jp_t    ) + (1.0d0 - wy ) * wq
+                                          rhoe_t(mod(k-1,32)+1, jp_t - 1) = rhoe_t(mod(k-1,32)+1, jp_t - 1) +          wy   * wq
                                     else
                                           !$acc atomic update
                                           rhoe(jp    ) = rhoe(jp    ) + (1.0d0 - wy ) * wq
