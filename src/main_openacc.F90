@@ -185,6 +185,9 @@
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:,:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:,:) :: ypi, zpi, vxpi, vypi, vzpi
+            double precision, allocatable, dimension(:,:) :: tmp
+            integer, allocatable, dimension(:,:,:)        :: dest
+            integer, allocatable, dimension(:)            :: tmpc
             double precision                              :: vxpeprox, vxpiprox
       end module part
 
@@ -255,7 +258,7 @@
             ! Read input parameters
             call read_input_parameters(out_name, out_path, nthreads)
 
-            npmax_t  = npmax / n_tiles
+            npmax_t  = 2*npmax / n_tiles
             ncells_t = ny / n_tiles
 
             ! Allocate data vectors
@@ -351,6 +354,8 @@
             !$acc enter data copyin( vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles), vxpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  npe(1:n_tiles), npi(1:n_tiles), ymin_t(1:n_tiles), ymax_t(1:n_tiles) )
+            !$acc enter data copyin(  tmp(1:npmax_t, 1:n_tiles), dest(1:npmax_t, 1:n_tiles,1:2), tmpc(1:n_tiles))
+            
             do ipic = 1, npic
                   
                   call system_clock(t0)
@@ -571,7 +576,11 @@
             allocate( vxpi(1:npmax_t, 1:n_tiles) ) 
             allocate( vypi(1:npmax_t, 1:n_tiles) ) 
             allocate( vzpi(1:npmax_t, 1:n_tiles) ) 
+            allocate(  tmp(1:npmax_t, 1:n_tiles) ) 
+            allocate( dest(1:npmax_t, 1:n_tiles, 2) ) 
+            allocate( tmpc(1:n_tiles) ) 
 
+            
             return
 
       end subroutine
@@ -594,6 +603,7 @@
             
             ! Datasets from 1 to npmax
             deallocate( ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi )
+            deallocate( tmp, dest) 
 
             return
 
@@ -711,13 +721,38 @@
       !******************************************************************************
       !******************************************************************************                              
 
+      subroutine swap( var1, var2, mapping, np, new_np)
+        use part
+        double precision   :: var1(1:npmax_t,1:n_tiles), var2(1:npmax_t,1:n_tiles)
+        integer            :: mapping(1:npmax_t, 1:n_tiles, 2)
+        integer            :: np(n_tiles),new_np(n_tiles)
+        integer i, t
+        !$acc parallel loop present(mapping, var1, var2,np) 
+        do t = 1, n_tiles
+           !$acc loop vector 
+           do i = 1, np(t)
+              var2(mapping(i,t,2),mapping(i,t,1)) = var1(i,t)
+           enddo
+        enddo
+        
+        !$acc parallel loop 
+        do t = 1, n_tiles
+           !$acc loop vector 
+           do i = 1, new_np(t)
+              var1(i,t) = var2(i,t)
+           enddo
+        enddo
+
+        
+      end subroutine swap
+      
       subroutine scatter 
      
             use poi
             use part
             use diagn
             implicit none
-            integer            :: i, j, k, t, jp, jp_t, jt
+            integer            :: i, j, k, t, jp, jp_t, jt, d
             integer, parameter :: vectorlen = 128
             double precision   :: rhoe_t(1:vectorlen,0:ncells_t), rhoi_t(1:vectorlen,0:ncells_t), sum
 
@@ -820,6 +855,54 @@
 
             end do
 
+
+            if ( dble(npe_out_of_tile)/dble(npinit) > 0.1) then
+               !$acc parallel loop 
+               do i=1,n_tiles
+                  tmpc(i)=0
+               end do
+               !$acc parallel loop present(dest)
+               do t = 1, n_tiles
+                  !$acc loop vector 
+                  do i = 1, npe(t)
+                     jp             = int(ype(i,t) / dy) + 1
+                     d = (jp-1)/ncells_t+1                     
+                     dest(i,t,1) = d
+                     !$acc atomic capture
+                     tmpc(d) = tmpc(d)+1
+                     dest(i,t,2) = tmpc(d)
+                     !$acc end atomic
+                  enddo
+               enddo
+               !$acc parallel loop
+               do i=1,n_tiles
+                  if (tmpc(i) > npmax_t) print*,"too many cells in tile"
+               end do
+               print*,"calling swap"
+               call swap(ype, tmp, dest, npe, tmpc)
+               !$acc parallel loop present(dest)
+               do t = 1, n_tiles
+                  !$acc loop vector 
+                  do i = 1, tmpc(t)
+                     jp             = int(ype(i,t) / dy) + 1
+                     d = (jp-1)/ncells_t+1                     
+                     if (d .ne. t) print*,"moved to wrong pos"
+                  enddo
+               enddo
+               call swap(zpe, tmp, dest, npe, tmpc)
+               call swap(vxpe, tmp, dest, npe, tmpc)
+               call swap(vype, tmp, dest, npe, tmpc)
+               call swap(vzpe, tmp, dest, npe, tmpc)
+
+               !$acc parallel loop
+               do i=1,n_tiles
+                  npe(i)=tmpc(i)
+               end do
+
+            end if
+
+            
+            
             ! Periodic boundary conditions for both ion and electron charge density
             !$acc serial
             rhoe(0)  = rhoe(0) + rhoe(ny)   
