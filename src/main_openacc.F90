@@ -732,7 +732,7 @@
             implicit none
             integer            :: i, j, k, t, jp, jp_t, jt
             integer, parameter :: vectorlen = 128
-            double precision   :: rhoe_t(1:vectorlen,0:ncells_t), rhoi_t(1:vectorlen,0:ncells_t), sum
+            double precision   :: rhoe_t(1:32,0:ncells_t), rhoi_t(1:vectorlen,0:ncells_t), sum
 
             double precision :: wy
       
@@ -761,8 +761,8 @@
                                     wy             = ( y(jp) - ype(i+k-1,t) ) / dy
 
                                     if ( jp_t > 0 .and. jp_t <= ncells_t ) then
-                                          rhoe_t(k, jp_t    ) = rhoe_t(k, jp_t    ) + (1.0d0 - wy ) * wq
-                                          rhoe_t(k, jp_t - 1) = rhoe_t(k, jp_t - 1) +          wy   * wq
+                                          rhoe_t(mod(k,32), jp_t    ) = rhoe_t(mod(k,32), jp_t    ) + (1.0d0 - wy ) * wq
+                                          rhoe_t(mod(k,32), jp_t - 1) = rhoe_t(mod(k,32), jp_t - 1) +          wy   * wq
                                     else
                                           !$acc atomic update
                                           rhoe(jp    ) = rhoe(jp    ) + (1.0d0 - wy ) * wq
@@ -779,7 +779,8 @@
                   do j = 0, ncells_t
                         sum = 0.0d0
                         !$acc loop vector reduction(+:sum)
-                        do k = 1, vectorlen
+                        !do k = 1, vectorlen
+                        do k = 1, 32
                               sum = sum + rhoe_t(k,j)
                         end do
                         !$acc atomic update
