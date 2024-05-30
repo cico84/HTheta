@@ -182,10 +182,6 @@
             integer            :: npmax, npmax_t, npic, ncells_t
             integer, parameter :: n_tiles = 500
             integer 		 :: npe(1:n_tiles), npi(1:n_tiles)
-            integer, allocatable, dimension(:,:)            :: tile_transfer_data ! 2D array containing IDs of particles changing tile
-            double precision, allocatable, dimension(:,:,:) :: tile_receive_data  ! 2D array containing the position and velocity of particles changing tile
-            integer, allocatable, dimension(:  )            :: n_transfer         ! 1D array containing number of particles that have left each tile
-            integer, allocatable, dimension(:  )            :: n_receive          ! 1D array containing number of particles that have entered each tile
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:,:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:,:) :: ypi, zpi, vxpi, vypi, vzpi
@@ -355,8 +351,6 @@
             !$acc enter data copyin( vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles), vxpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  npe(1:n_tiles), npi(1:n_tiles), ymin_t(1:n_tiles), ymax_t(1:n_tiles) )
-            !$acc enter data copyin(   n_transfer(1:n_tiles), tile_transfer_data(    1:npmax_t/ncells_t,1:n_tiles) )
-            !$acc enter data copyin(   n_receive (1:n_tiles), tile_receive_data (1:5,1:npmax_t/ncells_t,1:n_tiles) )
             do ipic = 1, npic
                   
                   call system_clock(t0)
@@ -453,8 +447,6 @@
             !$acc exit data copyout(   ype(1:npmax_t, 1:n_tiles),  zpe(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(  vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(   ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
-            !$acc exit data copyout(   n_transfer(1:n_tiles), tile_transfer_data(    1:npmax_t/ncells_t,1:n_tiles) )
-            !$acc exit data copyout(   n_receive (1:n_tiles), tile_receive_data (1:5,1:npmax_t/ncells_t,1:n_tiles) )
             !******************************************************************************
             !******************************************************************************
 
@@ -568,11 +560,6 @@
             allocate( ymin_t(1:n_tiles) )
             allocate( ymax_t(1:n_tiles) )
 
-            allocate( tile_transfer_data (   1:npmax_t/ncells_t, 1:n_tiles ) )
-            allocate( tile_receive_data  (5, 1:npmax_t/ncells_t, 1:n_tiles ) )
-            allocate( n_transfer         (1:n_tiles)                         )
-            allocate( n_receive          (1:n_tiles)                         )
-
             ! Datasets from 1 to npmax and 1 to n_tiles
             allocate(  ype(1:npmax_t, 1:n_tiles) ) 
             allocate(  zpe(1:npmax_t, 1:n_tiles) ) 
@@ -603,7 +590,7 @@
             implicit none
 
             ! Datasets from 0 to ny
-            deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi)
+            deallocate( y, vol, rhoe, rhoi, phi, Ey, dpoi, ymin_t, ymax_t)
             
             ! Datasets from 1 to npmax
             deallocate( ype, zpe, vxpe, vype, vzpe, ypi, zpi, vxpi, vypi, vzpi )
