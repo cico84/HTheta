@@ -203,6 +203,7 @@
             integer(8)         :: nticks_sec
             integer(8)         :: nticks_max
             integer(8)         :: t00, t0, t1, t2, t3, t4, t5
+            integer(4)         :: npi_out_of_tile, npe_out_of_tile
       end module diagn
 
       module rand
@@ -337,7 +338,7 @@
             open (12,file=trim(out_path)//'/'//trim(out_name)//'_cpu_times.out',status='unknown',position='append')
 
             write(12,'(1A25,1E10.3)') " Initialization time [s]:", time_ini
-            write(12,'(1A60)') "  SCATTER [s]    POISSON [s]     PUSH [s]        OTHR [s]   "
+            write(12,'(1A85)') "  SCATTER [s]    POISSON [s]     PUSH [s]        OTHR [s]     ELE OUT(%)   ION OUT(%)"
             
             !******************************************************************************      
             write(3,*) " Maximum number of particles per tile:", maxval(npe(1:n_tiles)), maxval(npi(1:n_tiles))
@@ -366,13 +367,16 @@
                   time_push    = 0.0d0 
                   time_othr    = 0.0d0
 
+                  ! Initialize particles that are out of the tile
+                  npi_out_of_tile = 0
+                  npe_out_of_tile = 0
+
                   call nvtxStartRange('SCATTER PHASE')
                   ! Weight particles to the nodes of the mesh to obtain the charge density
                   
-                  ! Copy data from CPU to GPU memory
                   call scatter
+
                   call nvtxEndRange
-                  ! Copy data from GPU to CPU memory
 
                   call system_clock(t1)
                   time_scatter = dble(t1 - t0) / dble(nticks_sec)
@@ -431,14 +435,14 @@
                   if ( mod(ipic,1) .eq. 0 ) then
                         !$acc wait(3)
                         write(11,101) ipic*dt, Ee_ave, Ei_ave, mob, phi(ny/2), Ey(ny/2), rhoe(ny/2)/q, rhoi(ny/2)/q
-                        write(12,102) time_scatter, time_poisson, time_push, time_othr
+                        write(12,102) time_scatter, time_poisson, time_push, time_othr, npe_out_of_tile/npinit, npi_out_of_tile/npinit
                   end if
 
                   call system_clock(t5)
                   time_pic_cycle = time_pic_cycle + dble(t5 - t0) / dble(nticks_sec)
             
 101         format (8(2x,1pg13.5e3))
-102         format (4(2x,1e12.3,1x))
+102         format (6(2x,1e12.3,1x))
             
             ! end of PIC cycle
             end do
@@ -726,7 +730,7 @@
             implicit none
             integer            :: i, j, k, t, jp, jp_t, jt
             integer, parameter :: vectorlen = 128
-            double precision   :: rhoe_t(1:vectorlen,0:ncells_t), sum
+            double precision   :: rhoe_t(1:vectorlen,0:ncells_t), rhoi_t(1:vectorlen,0:ncells_t), sum
 
             double precision :: wy
       
@@ -739,32 +743,31 @@
             
             ! Electron charge deposition on the mesh points
 
-            !$acc parallel loop vector_length(vectorlen)  present(ype, npe, y, rhoe) private(rhoe_t)
+            !$acc parallel loop vector_length(vectorlen) present(ype, npe, y, rhoe) private(rhoe_t) reduction(+:npe_out_of_tile)
             do t = 1, n_tiles
                   !$acc cache(rhoe_t(1:vectorlen,0:ncells_t))
                   rhoe_t = 0.d0
                   !$acc loop vector collapse(2)
                   do i = 1, npe(t), vectorlen 
-                        do k = 1, vectorlen
+                        do k = 1, vectorlen     ! This represents the thread ID
                               ! Particle index in tile is " i + k - 1 ". For i = 1, k = 1, you have index 1
                               ! For i = 1, k = 128, you have index 128, for i = 129, k = 1, you have index 129
                               if ( i + k - 1 < npe(t) ) then
                                     ! Charge density weighting (linear weighting, CIC)
                                     jp             = int(ype(i+k-1,t) / dy) + 1
-                                    jp_t           = jp - (t - 1) * ncells_t
+                                    jp_t           = jp - (t - 1) * ncells_t    ! This should be between 1 and ncells_t
                                     wy             = ( y(jp) - ype(i+k-1,t) ) / dy
-                                    !if ( jp_t > 0 .and. jp_t <= ncells_t ) then
-                                    !      rhoe_t (k, jp_t-1) = rhoe_t(jp_t-1) +          wy   * wq 
-                                    !      rhoe_t (k, jp_t  ) = rhoe_t(jp_t  ) + (1.0d0 - wy ) * wq 
-                                    !end if
+
                                     if ( jp_t > 0 .and. jp_t <= ncells_t ) then
-                                       rhoe_t(k, jp_t    ) = rhoe_t(k, jp_t    ) + (1.0d0 - wy ) * wq
-                                       rhoe_t(k, jp_t + 1) = rhoe_t(k, jp_t + 1) +          wy   * wq
+                                          rhoe_t(k, jp_t    ) = rhoe_t(k, jp_t    ) + (1.0d0 - wy ) * wq
+                                          rhoe_t(k, jp_t - 1) = rhoe_t(k, jp_t - 1) +          wy   * wq
                                     else
-                                       !$acc atomic update
-                                       rhoe(jp    ) = rhoe(jp    ) + (1.0d0 - wy ) * wq
-                                       !$acc atomic update
-                                       rhoe(jp + 1) = rhoe(jp + 1) +          wy   * wq
+                                          !$acc atomic update
+                                          rhoe(jp    ) = rhoe(jp    ) + (1.0d0 - wy ) * wq
+                                          !$acc atomic update
+                                          rhoe(jp - 1) = rhoe(jp - 1) +          wy   * wq
+                                          ! Update number of electrons that happen to be outside of the tile
+                                          npe_out_of_tile = npe_out_of_tile + 1
                                     endif
                                     
                               end if
@@ -784,19 +787,64 @@
             end do
 
             ! Ion charge deposition on the mesh points 
-            !$acc parallel loop
+
+            !$acc parallel loop vector_length(vectorlen) present(ypi, npi, y, rhoi) private(rhoi_t) reduction(+:npi_out_of_tile)
             do t = 1, n_tiles
-                  !$acc loop vector
-                  do i = 1, npi(t)      
-                        ! Charge density weighting (linear weighting, CIC) 
-                        jp             = int(ypi(i,t) / dy) + 1 
-                        wy             = ( y(jp) - ypi(i,t) ) / dy
-                        !$acc atomic update   
-                        rhoi(jp-1) = wy*wq + rhoi(jp-1)
-                        !$acc atomic update
-                        rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)
+                  !$acc cache(rhoi_t(1:vectorlen,0:ncells_t))
+                  rhoi_t = 0.d0
+                  !$acc loop vector collapse(2)
+                  do i = 1, npi(t), vectorlen 
+                        do k = 1, vectorlen     ! This represents the thread ID
+                              ! Particle index in tile is " i + k - 1 ". For i = 1, k = 1, you have index 1
+                              ! For i = 1, k = 128, you have index 128, for i = 129, k = 1, you have index 129
+                              if ( i + k - 1 < npe(t) ) then
+                                    ! Charge density weighting (linear weighting, CIC)
+                                    jp             = int(ypi(i+k-1,t) / dy) + 1
+                                    jp_t           = jp - (t - 1) * ncells_t    ! This should be between 1 and ncells_t
+                                    wy             = ( y(jp) - ypi(i+k-1,t) ) / dy
+
+                                    if ( jp_t > 0 .and. jp_t <= ncells_t ) then
+                                          rhoi_t(k, jp_t    ) = rhoi_t(k, jp_t    ) + (1.0d0 - wy ) * wq
+                                          rhoi_t(k, jp_t - 1) = rhoi_t(k, jp_t - 1) +          wy   * wq
+                                    else
+                                          !$acc atomic update
+                                          rhoi(jp    ) = rhoi(jp    ) + (1.0d0 - wy ) * wq
+                                          !$acc atomic update
+                                          rhoi(jp - 1) = rhoi(jp - 1) +          wy   * wq
+                                          ! Update number of ions that happen to be outside of the tile
+                                          npi_out_of_tile = npi_out_of_tile + 1
+                                    endif
+                                    
+                              end if
+                        end do
                   end do
+
+                  do j = 0, ncells_t
+                        sum = 0.0d0
+                        !$acc loop vector reduction(+:sum)
+                        do k = 1, vectorlen
+                              sum = sum + rhoi_t(k,j)
+                        end do
+                        !$acc atomic update
+                        rhoi((t-1)*ncells_t + j) = rhoi((t-1)*ncells_t + j) + sum
+                  end do
+
             end do
+
+            ! ! Ion charge deposition on the mesh points 
+            ! !$acc parallel loop
+            ! do t = 1, n_tiles
+            !       !$acc loop vector
+            !       do i = 1, npi(t)      
+            !             ! Charge density weighting (linear weighting, CIC) 
+            !             jp             = int(ypi(i,t) / dy) + 1 
+            !             wy             = ( y(jp) - ypi(i,t) ) / dy
+            !             !$acc atomic update   
+            !             rhoi(jp-1) = wy*wq + rhoi(jp-1)
+            !             !$acc atomic update
+            !             rhoi(jp  ) = (1.0d0 - wy )*wq + rhoi(jp)
+            !       end do
+            ! end do
 
             ! Periodic boundary conditions for both ion and electron charge density
             !$acc serial
@@ -889,12 +937,12 @@
             duekteme = -2.*kB*Te0/me   ! Electrons leap frog constant
             duektimi = -2.*kB*Ti0/Mi   ! Ions leap frog constant
 
-            ! Initialize the transfer data array
-            !$acc parallel loop
-            do t = 1, n_tiles
-                  n_transfer (t) = 0
-                  n_receive  (t) = 0
-            end do
+            !! Initialize the transfer data array
+            ! !$acc parallel loop
+            ! do t = 1, n_tiles
+            !       n_transfer (t) = 0
+            !       n_receive  (t) = 0
+            ! end do
 
             ! Electrons loop
             !$acc parallel loop vector_length(256)
@@ -947,66 +995,68 @@
                         !         vzpe(i)=vmod*DSIN(ang)
                         !   end if
                         !
-                        ! Determine particles that have left the tile
-                        cc_tile = min( floor( ( ype (i,t) - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
-#if 0
-                        if ( cc_tile .ne. t ) then
-                              !$acc atomic capture
-                              n_transfer (t)   = n_transfer (t) + 1
-                              local_n_transfer = n_transfer (t)
-                              !$acc end atomic
-                              tile_transfer_data  (local_n_transfer, t) = i
+!                        ! Determine particles that have left the tile
+!                        cc_tile = min( floor( ( ype (i,t) - y(0) ) / (dy*ncells_t)  ) + 1, n_tiles)
+! #if 0
+!                         if ( cc_tile .ne. t ) then
+!                               !$acc atomic capture
+!                               n_transfer (t)   = n_transfer (t) + 1
+!                               local_n_transfer = n_transfer (t)
+!                               !$acc end atomic
+!                               tile_transfer_data  (local_n_transfer, t) = i
 
-                              !$acc atomic capture
-                              n_receive (cc_tile) = n_receive (cc_tile) + 1
-                              local_n_receive     = n_receive (cc_tile)
-                              !$acc end atomic
-                              tile_receive_data   (1:5, local_n_receive, cc_tile) = &
-                              (/ype(i,t), zpe(i,t), vxpe(i,t), vype(i,t), vzpe(i,t)/)
-                        end if
-#endif
-                     end do
-            end do
-
-#if 0
-            ! Remove particles that have left each tile (for electrons)
-            !$acc parallel loop 
-            do t = 1, n_tiles
-                  !call resorting( n_transfer(t), tile_transfer_data  (1:n_transfer(t), t) )
-                  !$acc loop seq
-                  do i = n_transfer(t), -1, 1
-                        irem = tile_transfer_data  (i, t)
-                        if ( irem .ne. npe  (t) ) then
-                              ype  (irem, t) = ype  (npe(t), t)
-                              zpe  (irem, t) = zpe  (npe(t), t)
-                              vxpe (irem, t) = vxpe (npe(t), t)
-                              vype (irem, t) = vype (npe(t), t)
-                              vzpe (irem, t) = vzpe (npe(t), t)
-                        end if
-                        npe  (t) = npe  (t) - 1
+!                               !$acc atomic capture
+!                               n_receive (cc_tile) = n_receive (cc_tile) + 1
+!                               local_n_receive     = n_receive (cc_tile)
+!                               !$acc end atomic
+!                               tile_receive_data   (1:5, local_n_receive, cc_tile) = &
+!                               (/ype(i,t), zpe(i,t), vxpe(i,t), vype(i,t), vzpe(i,t)/)
+!                         end if
+! #endif
                   end do
             end do
 
-            ! Add particles to each tile
-            !$acc parallel loop
-            do t = 1, n_tiles
-                  !$acc loop seq
-                  do i = 1, n_receive(t)
-                        ype (npe(t)+1, t) = tile_receive_data (1, i, t) 
-                        zpe (npe(t)+1, t) = tile_receive_data (2, i, t) 
-                        vxpe(npe(t)+1, t) = tile_receive_data (3, i, t) 
-                        vype(npe(t)+1, t) = tile_receive_data (4, i, t) 
-                        vzpe(npe(t)+1, t) = tile_receive_data (5, i, t) 
-                        npe (          t) = npe               (      t) + 1
-                  end do
-            end do
+!#if 0
+!             ! Remove particles that have left each tile (for electrons)
+!             !$acc parallel loop 
+!             do t = 1, n_tiles
+!                   !call resorting( n_transfer(t), tile_transfer_data  (1:n_transfer(t), t) )
+!                   !$acc loop seq
+!                   do i = n_transfer(t), -1, 1
+!                         irem = tile_transfer_data  (i, t)
+!                         if ( irem .ne. npe  (t) ) then
+!                               ype  (irem, t) = ype  (npe(t), t)
+!                               zpe  (irem, t) = zpe  (npe(t), t)
+!                               vxpe (irem, t) = vxpe (npe(t), t)
+!                               vype (irem, t) = vype (npe(t), t)
+!                               vzpe (irem, t) = vzpe (npe(t), t)
+!                         end if
+!                         npe  (t) = npe  (t) - 1
+!                   end do
+!             end do
 
-            !$acc parallel loop
-            do t = 1, n_tiles
-                  n_transfer (t) = 0
-                  n_receive  (t) = 0
-            end do
-#endif
+!             ! Add particles to each tile
+!             !$acc parallel loop
+!             do t = 1, n_tiles
+!                   !$acc loop seq
+!                   do i = 1, n_receive(t)
+!                         ype (npe(t)+1, t) = tile_receive_data (1, i, t) 
+!                         zpe (npe(t)+1, t) = tile_receive_data (2, i, t) 
+!                         vxpe(npe(t)+1, t) = tile_receive_data (3, i, t) 
+!                         vype(npe(t)+1, t) = tile_receive_data (4, i, t) 
+!                         vzpe(npe(t)+1, t) = tile_receive_data (5, i, t) 
+!                         npe (          t) = npe               (      t) + 1
+!                   end do
+!             end do
+
+!             !$acc parallel loop
+!             do t = 1, n_tiles
+!                   n_transfer (t) = 0
+!                   n_receive  (t) = 0
+!             end do
+! #endif
+
+
             ! Ions loop
             !$acc parallel loop
             do t = 1, n_tiles
