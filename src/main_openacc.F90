@@ -889,7 +889,7 @@
                      !$acc end atomic
                   enddo
                enddo
-               !$acc parallel loop
+            !   !$acc parallel loop
             !    do i=1,n_tiles
             !       if (tmpc(i) > npmax_t) print*,"too many particles in tile"
             !    end do
@@ -935,7 +935,7 @@
                         !$acc end atomic
                      enddo
                   enddo
-                  !$acc parallel loop
+                  !!$acc parallel loop
                   !do i=1,n_tiles
                   !   if (tmpc(i) > npmax_t) print*,"too many particles in tile"
                   !end do
