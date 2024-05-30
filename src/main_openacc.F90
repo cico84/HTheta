@@ -258,7 +258,7 @@
             ! Read input parameters
             call read_input_parameters(out_name, out_path, nthreads)
 
-            npmax_t  = 2*npmax / n_tiles
+            npmax_t  = 5*npmax / n_tiles
             ncells_t = ny / n_tiles
 
             ! Allocate data vectors
