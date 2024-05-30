@@ -871,7 +871,7 @@
             end do
 
             ! Correcting particle tiles (if needed)
-            if ( dble(npe_out_of_tile)/dble(npinit) > 0.1) then
+            if ( dble(npe_out_of_tile)/dble(npinit) > 0.25) then
                !$acc parallel loop 
                do i=1,n_tiles
                   tmpc(i) = 0
@@ -917,7 +917,7 @@
             end if
 
             ! Correcting particle tiles (if needed)
-            if ( dble(npi_out_of_tile)/dble(npinit) > 0.1) then
+            if ( dble(npi_out_of_tile)/dble(npinit) > 0.25) then
                   !$acc parallel loop 
                   do i = 1,n_tiles
                      tmpc(i)=0
