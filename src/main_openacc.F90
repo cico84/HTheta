@@ -721,14 +721,14 @@
 
       !******************************************************************************
       !******************************************************************************                              
-
+      ! POSSIBLE BUG IN SUBROUTINE
       subroutine swap( var1, var2, mapping, np, new_np)
         use part
         double precision   :: var1(1:npmax_t,1:n_tiles), var2(1:npmax_t,1:n_tiles)
         integer            :: mapping(1:npmax_t, 1:n_tiles, 2)
         integer            :: np(n_tiles),new_np(n_tiles)
         integer i, t
-        !$acc parallel loop present(mapping, var1, var2,np) 
+        !$acc parallel loop present(mapping, var1, var2, np) 
         do t = 1, n_tiles
            !$acc loop vector 
            do i = 1, np(t)
@@ -870,10 +870,10 @@
                   rhoi(j) = rhoi(j) / vol(j)
             end do
 
-            ! Correcting particle tiles (if needed)
+            ! Correcting particle tiles (if needed) THIS PART CURRENTLY HAS A BUG
             if ( dble(npe_out_of_tile)/dble(npinit) > 0.5) then
                !$acc parallel loop 
-               do i=1,n_tiles
+               do i = 1, n_tiles
                   tmpc(i) = 0
                end do
                !$acc parallel loop present(dest)
