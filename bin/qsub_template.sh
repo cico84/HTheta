@@ -1,8 +1,8 @@
 #!/bin/bash
 #PBS -S /bin/bash
-#PBS -N DTT_DOME_BEV_all_eff_cuda
-#PBS -o DTT_DOME_BEV_all_eff_cuda.out
-#PBS -e DTT_DOME_BEV_all_eff_cuda.err
+#PBS -N sim_htheta
+#PBS -o sim_htheta.out
+#PBS -e sim_htheta.err
 #PBS -q dtt
 #PBS -l select=1:ncpus=1:ngpus=1
 

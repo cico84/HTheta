@@ -1,4 +1,5 @@
 # Load required modules for compilation
+module purge
 module load autoload petsc/3.15_dp_hypre_omp--hpc-sdk--20.11--binary
 
 # Compile code, if necessary
