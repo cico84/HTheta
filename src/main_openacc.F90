@@ -185,9 +185,9 @@
             ! Datasets from 1 to npmax
             double precision, allocatable, dimension(:,:) :: ype, zpe, vxpe, vype, vzpe
             double precision, allocatable, dimension(:,:) :: ypi, zpi, vxpi, vypi, vzpi
-            double precision, allocatable, dimension(:,:) :: tmp
+            double precision, allocatable, dimension(:,:) :: tmp   ! Temporary particle data array used for tiles update
             integer, allocatable, dimension(:,:,:)        :: dest
-            integer, allocatable, dimension(:)            :: tmpc
+            integer, allocatable, dimension(:)            :: np_new
             double precision                              :: vxpeprox, vxpiprox
       end module part
 
@@ -354,7 +354,7 @@
             !$acc enter data copyin( vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles), vxpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
             !$acc enter data copyin(  npe(1:n_tiles), npi(1:n_tiles), ymin_t(1:n_tiles), ymax_t(1:n_tiles) )
-            !$acc enter data copyin(  tmp(1:npmax_t, 1:n_tiles), dest(1:npmax_t, 1:n_tiles,1:2), tmpc(1:n_tiles))
+            !$acc enter data copyin(  tmp(1:npmax_t, 1:n_tiles), dest(1:npmax_t, 1:n_tiles,1:2), np_new(1:n_tiles))
             
             do ipic = 1, npic
                   
@@ -452,7 +452,7 @@
             !$acc exit data copyout(   ype(1:npmax_t, 1:n_tiles),  zpe(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(  vzpi(1:npmax_t, 1:n_tiles), vypi(1:npmax_t, 1:n_tiles) )
             !$acc exit data copyout(   ypi(1:npmax_t, 1:n_tiles),  zpi(1:npmax_t, 1:n_tiles) )
-            !$acc exit data copyout(  tmp(1:npmax_t, 1:n_tiles), dest(1:npmax_t, 1:n_tiles,1:2), tmpc(1:n_tiles))
+            !$acc exit data copyout(  tmp(1:npmax_t, 1:n_tiles), dest(1:npmax_t, 1:n_tiles,1:2), np_new(1:n_tiles))
             !******************************************************************************
             !******************************************************************************
 
@@ -567,19 +567,19 @@
             allocate( ymax_t(1:n_tiles) )
 
             ! Datasets from 1 to npmax and 1 to n_tiles
-            allocate(  ype(1:npmax_t, 1:n_tiles) ) 
-            allocate(  zpe(1:npmax_t, 1:n_tiles) ) 
-            allocate( vxpe(1:npmax_t, 1:n_tiles) ) 
-            allocate( vype(1:npmax_t, 1:n_tiles) ) 
-            allocate( vzpe(1:npmax_t, 1:n_tiles) ) 
-            allocate(  ypi(1:npmax_t, 1:n_tiles) ) 
-            allocate(  zpi(1:npmax_t, 1:n_tiles) ) 
-            allocate( vxpi(1:npmax_t, 1:n_tiles) ) 
-            allocate( vypi(1:npmax_t, 1:n_tiles) ) 
-            allocate( vzpi(1:npmax_t, 1:n_tiles) ) 
-            allocate(  tmp(1:npmax_t, 1:n_tiles) ) 
-            allocate( dest(1:npmax_t, 1:n_tiles, 2) ) 
-            allocate( tmpc(1:n_tiles) ) 
+            allocate(  ype   (1:npmax_t, 1:n_tiles) ) 
+            allocate(  zpe   (1:npmax_t, 1:n_tiles) ) 
+            allocate( vxpe   (1:npmax_t, 1:n_tiles) ) 
+            allocate( vype   (1:npmax_t, 1:n_tiles) ) 
+            allocate( vzpe   (1:npmax_t, 1:n_tiles) ) 
+            allocate(  ypi   (1:npmax_t, 1:n_tiles) ) 
+            allocate(  zpi   (1:npmax_t, 1:n_tiles) ) 
+            allocate( vxpi   (1:npmax_t, 1:n_tiles) ) 
+            allocate( vypi   (1:npmax_t, 1:n_tiles) ) 
+            allocate( vzpi   (1:npmax_t, 1:n_tiles) ) 
+            allocate(  tmp   (1:npmax_t, 1:n_tiles) ) 
+            allocate( dest   (1:npmax_t, 1:n_tiles, 2) ) 
+            allocate( np_new(1:n_tiles) ) 
 
             
             return
@@ -721,31 +721,6 @@
 
       !******************************************************************************
       !******************************************************************************                              
-      ! POSSIBLE BUG IN SUBROUTINE
-      subroutine swap( var1, var2, mapping, np, new_np)
-        use part
-        double precision   :: var1(1:npmax_t,1:n_tiles), var2(1:npmax_t,1:n_tiles)
-        integer            :: mapping(1:npmax_t, 1:n_tiles, 2)
-        integer            :: np(n_tiles),new_np(n_tiles)
-        integer i, t
-        !$acc parallel loop present(mapping, var1, var2, np) 
-        do t = 1, n_tiles
-           !$acc loop vector 
-           do i = 1, np(t)
-              var2(mapping(i,t,2),mapping(i,t,1)) = var1(i,t)
-           enddo
-        enddo
-        
-        !$acc parallel loop 
-        do t = 1, n_tiles
-           !$acc loop vector 
-           do i = 1, new_np(t)
-              var1(i,t) = var2(i,t)
-           enddo
-        enddo
-
-        
-      end subroutine swap
       
       subroutine scatter 
      
@@ -858,9 +833,9 @@
 
             ! Periodic boundary conditions for both ion and electron charge density
             !$acc serial
-            rhoe(0)  = rhoe(0) + rhoe(ny)   
+            rhoe(0)  = rhoe(0) + rhoe(ny)
             rhoe(ny) = rhoe(0)
-            rhoi(0)  = rhoi(0) + rhoi(ny)   
+            rhoi(0)  = rhoi(0) + rhoi(ny)
             rhoi(ny) = rhoi(0)
             !$acc end serial
 
@@ -872,92 +847,87 @@
 
             ! Correcting particle tiles (if needed) THIS PART CURRENTLY HAS A BUG
             if ( dble(npe_out_of_tile)/dble(npinit) > 0.5) then
-               !$acc parallel loop 
-               do i = 1, n_tiles
-                  tmpc(i) = 0
-               end do
-               !$acc parallel loop present(dest)
-               do t = 1, n_tiles
-                  !$acc loop vector 
-                  do i = 1, npe(t)
-                     jp             = int(ype(i,t) / dy) + 1
-                     d = (jp-1)/ncells_t+1                     
-                     dest(i,t,1) = d
-                     !$acc atomic capture
-                     tmpc(d) = tmpc(d)+1
-                     dest(i,t,2) = tmpc(d)
-                     !$acc end atomic
-                  enddo
-               enddo
-            !   !$acc parallel loop
-            !    do i=1,n_tiles
-            !       if (tmpc(i) > npmax_t) print*,"too many particles in tile"
-            !    end do
-            !   print*,"calling swap"
-               call swap(ype, tmp, dest, npe, tmpc)
-            !    !$acc parallel loop present(dest)
-            !    do t = 1, n_tiles
-            !       !$acc loop vector 
-            !       do i = 1, tmpc(t)
-            !          jp             = int(ype(i,t) / dy) + 1
-            !          d = (jp-1)/ncells_t+1                     
-            !          if (d .ne. t) print*,"moved to wrong pos"
-            !       enddo
-            !    enddo
-               call swap(zpe, tmp, dest, npe, tmpc)
-               call swap(vxpe, tmp, dest, npe, tmpc)
-               call swap(vype, tmp, dest, npe, tmpc)
-               call swap(vzpe, tmp, dest, npe, tmpc)
-
-               !$acc parallel loop
-               do i=1,n_tiles
-                  npe(i)=tmpc(i)
-               end do
-
-            end if
-
-            ! Correcting particle tiles (if needed)
-            if ( dble(npi_out_of_tile)/dble(npinit) > 0.5) then
                   !$acc parallel loop 
-                  do i = 1,n_tiles
-                     tmpc(i)=0
+                  do i = 1, n_tiles
+                        ! Set to zero the new counter for number of particle per tile
+                        np_new(i) = 0
                   end do
                   !$acc parallel loop present(dest)
                   do t = 1, n_tiles
-                     !$acc loop vector 
-                     do i = 1, npi(t)
-                        jp             = int(ypi(i,t) / dy) + 1
-                        d = (jp-1)/ncells_t+1                     
-                        dest(i,t,1) = d
-                        !$acc atomic capture
-                        tmpc(d) = tmpc(d)+1
-                        dest(i,t,2) = tmpc(d)
-                        !$acc end atomic
-                     enddo
-                  enddo
+                        !$acc loop vector 
+                        do i = 1, npe(t)
+                              jp = int(ype(i,t) / dy) + 1
+                              ! Destination tile index
+                              d  = (jp-1)/ncells_t + 1
+                              dest(i,t,1) = d
+                              !$acc atomic capture
+                              ! Update number of particles in new tiles
+                              np_new(d)   = np_new(d) + 1
+                              ! Update index of particle in new tile "d"
+                              dest(i,t,2) = np_new(d)
+                              !$acc end atomic
+                        end do
+                  end do
+                  !   !$acc parallel loop
+                  !    do i=1,n_tiles
+                  !       if (np_new(i) > npmax_t) print*,"too many particles in tile"
+                  !    end do
+                  !   print*,"calling swap"
+                  ! Update the new tiles using the information of the destination tile matrix
+                  call swap(ype, tmp, dest, npe, np_new)
+                  !    !$acc parallel loop present(dest)
+                  !    do t = 1, n_tiles
+                  !       !$acc loop vector 
+                  !       do i = 1, np_new(t)
+                  !          jp             = int(ype(i,t) / dy) + 1
+                  !          d = (jp-1)/ncells_t+1                     
+                  !          if (d .ne. t) print*,"moved to wrong pos"
+                  !       enddo
+                  !    enddo
+                  call swap( zpe, tmp, dest, npe, np_new)
+                  call swap(vxpe, tmp, dest, npe, np_new)
+                  call swap(vype, tmp, dest, npe, np_new)
+                  call swap(vzpe, tmp, dest, npe, np_new)
+
+                  !$acc parallel loop
+                  do i = 1, n_tiles
+                        npe(i) = np_new(i)
+                  end do
+
+            end if
+
+            ! Correcting particle tiles (if needed) for ions
+            if ( dble(npi_out_of_tile)/dble(npinit) > 0.5) then
+                  !$acc parallel loop 
+                  do i = 1, n_tiles
+                        np_new(i) = 0
+                  end do
+                  !$acc parallel loop present(dest)
+                  do t = 1, n_tiles
+                        !$acc loop vector 
+                        do i = 1, npi(t)
+                              jp = int(ypi(i,t) / dy) + 1
+                              d  = (jp-1)/ncells_t + 1                     
+                              dest(i,t,1) = d
+                              !$acc atomic capture
+                              np_new(d)   = np_new(d) + 1
+                              dest(i,t,2) = np_new(d)
+                              !$acc end atomic
+                        end do
+                  end do
                   !!$acc parallel loop
                   !do i=1,n_tiles
-                  !   if (tmpc(i) > npmax_t) print*,"too many particles in tile"
+                  !   if (np_new(i) > npmax_t) print*,"too many particles in tile"
                   !end do
-                  !print*,"calling swap"
-                  call swap(ypi, tmp, dest, npi, tmpc)
-                  !!$acc parallel loop present(dest)
-                  ! do t = 1, n_tiles
-                  !    !$acc loop vector 
-                  !    do i = 1, tmpc(t)
-                  !       jp             = int(ype(i,t) / dy) + 1
-                  !       d = (jp-1)/ncells_t+1                     
-                  !       if (d .ne. t) print*,"moved to wrong pos"
-                  !    enddo
-                  ! enddo
-                  call swap(zpi, tmp, dest, npi, tmpc)
-                  call swap(vxpi, tmp, dest, npi, tmpc)
-                  call swap(vypi, tmp, dest, npi, tmpc)
-                  call swap(vzpi, tmp, dest, npi, tmpc)
+                  call swap( ypi, tmp, dest, npi, np_new)
+                  call swap( zpi, tmp, dest, npi, np_new)
+                  call swap(vxpi, tmp, dest, npi, np_new)
+                  call swap(vypi, tmp, dest, npi, np_new)
+                  call swap(vzpi, tmp, dest, npi, np_new)
    
                   !$acc parallel loop
-                  do i = 1,n_tiles
-                     npi(i)=tmpc(i)
+                  do i = 1, n_tiles
+                        npi(i) = np_new(i)
                   end do
    
                end if
@@ -966,7 +936,37 @@
 
       end subroutine
             
-       
+      !******************************************************************************
+      !******************************************************************************
+      
+      subroutine swap( npmax_t, n_tiles, var1, var2, mapping, old_np, new_np)
+            
+            ! This subroutine swaps particles from old to new tiles, using a temporary matrix and the mapping matrix (dest)
+            integer          :: npmax_t, n_tiles
+            double precision :: var1   (1:npmax_t, 1:n_tiles), var2(1:npmax_t, 1:n_tiles)
+            integer          :: mapping(1:npmax_t, 1:n_tiles, 2)
+            integer          :: old_np (1:n_tiles), new_np(1:n_tiles)
+            integer             i, t
+            
+            !$acc parallel loop present(mapping, var1, var2, np) 
+            do t = 1, n_tiles
+                  !$acc loop vector 
+                  do i = 1, old_np(t)
+                        var2(mapping(i,t,2), mapping(i,t,1)) = var1(i,t)
+                  end do
+            end do
+        
+            ! Copy the temporary particle data matrix into the current data matrix (var1)
+            !$acc parallel loop 
+            do t = 1, n_tiles
+                  !$acc loop vector 
+                  do i = 1, new_np(t)
+                        var1(i,t) = var2(i,t)
+                  end do
+            end do
+        
+      end subroutine swap
+
       !******************************************************************************
       !******************************************************************************
 
