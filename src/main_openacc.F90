@@ -54,71 +54,71 @@
 !******************************************************************************
 
       ! Modules
-      ! NVTX profiling module
-      module nvtx
+      ! ! NVTX profiling module
+      ! module nvtx
 
-            use iso_c_binding
-            implicit none
+      !       use iso_c_binding
+      !       implicit none
             
-            integer,private :: col(7) = [ Z'0000ff00', Z'000000ff', Z'00ffff00', Z'00ff00ff', Z'0000ffff', Z'00ff0000', Z'00ffffff']
-            character(len=256),private :: tempName
+      !       integer,private :: col(7) = [ Z'0000ff00', Z'000000ff', Z'00ffff00', Z'00ff00ff', Z'0000ffff', Z'00ff0000', Z'00ffffff']
+      !       character(len=256),private :: tempName
             
-            type, bind(C):: nvtxEventAttributes
-                  integer(C_INT16_T):: version=1
-                  integer(C_INT16_T):: size=48 !
-                  integer(C_INT):: category=0
-                  integer(C_INT):: colorType=1 ! NVTX_COLOR_ARGB = 1
-                  integer(C_INT):: color
-                  integer(C_INT):: payloadType=0 ! NVTX_PAYLOAD_UNKNOWN = 0
-                  integer(C_INT):: reserved0
-                  integer(C_INT64_T):: payload   ! union uint,int,double
-                  integer(C_INT):: messageType=1  ! NVTX_MESSAGE_TYPE_ASCII     = 1 
-                  type(C_PTR):: message  ! ascii char
-            end type
+      !       type, bind(C):: nvtxEventAttributes
+      !             integer(C_INT16_T):: version=1
+      !             integer(C_INT16_T):: size=48 !
+      !             integer(C_INT):: category=0
+      !             integer(C_INT):: colorType=1 ! NVTX_COLOR_ARGB = 1
+      !             integer(C_INT):: color
+      !             integer(C_INT):: payloadType=0 ! NVTX_PAYLOAD_UNKNOWN = 0
+      !             integer(C_INT):: reserved0
+      !             integer(C_INT64_T):: payload   ! union uint,int,double
+      !             integer(C_INT):: messageType=1  ! NVTX_MESSAGE_TYPE_ASCII     = 1 
+      !             type(C_PTR):: message  ! ascii char
+      !       end type
             
-            interface nvtxRangePush
-                  ! push range with custom label and standard color
-                  subroutine nvtxRangePushA(name) bind(C, name='nvtxRangePushA')
-                        use iso_c_binding
-                        character(kind=C_CHAR,len=*) :: name
-                  end subroutine
+      !       interface nvtxRangePush
+      !             ! push range with custom label and standard color
+      !             subroutine nvtxRangePushA(name) bind(C, name='nvtxRangePushA')
+      !                   use iso_c_binding
+      !                   character(kind=C_CHAR,len=*) :: name
+      !             end subroutine
                   
-                  ! push range with custom label and custom color
-                  subroutine nvtxRangePushEx(event) bind(C, name='nvtxRangePushEx')
-                        use iso_c_binding
-                        import:: nvtxEventAttributes
-                        type(nvtxEventAttributes):: event
-                  end subroutine
-            end interface
+      !             ! push range with custom label and custom color
+      !             subroutine nvtxRangePushEx(event) bind(C, name='nvtxRangePushEx')
+      !                   use iso_c_binding
+      !                   import:: nvtxEventAttributes
+      !                   type(nvtxEventAttributes):: event
+      !             end subroutine
+      !       end interface
             
-            interface nvtxRangePop
-                  subroutine nvtxRangePop() bind(C, name='nvtxRangePop')
-                  end subroutine
-            end interface
+      !       interface nvtxRangePop
+      !             subroutine nvtxRangePop() bind(C, name='nvtxRangePop')
+      !             end subroutine
+      !       end interface
             
-            contains
+      !       contains
             
-                  subroutine nvtxStartRange(name,id)
-                        character(kind=c_char,len=*) :: name
-                        integer, optional:: id
-                        type(nvtxEventAttributes):: event
+      !             subroutine nvtxStartRange(name,id)
+      !                   character(kind=c_char,len=*) :: name
+      !                   integer, optional:: id
+      !                   type(nvtxEventAttributes):: event
                         
-                        tempName=trim(name)//c_null_char
+      !                   tempName=trim(name)//c_null_char
                         
-                        if ( .not. present(id)) then
-                              call nvtxRangePush(tempName)
-                        else
-                        event%color=col(mod(id,7)+1)
-                        event%message=c_loc(tempName)
-                        call nvtxRangePushEx(event)
-                        end if
-                  end subroutine
+      !                   if ( .not. present(id)) then
+      !                         call nvtxRangePush(tempName)
+      !                   else
+      !                   event%color=col(mod(id,7)+1)
+      !                   event%message=c_loc(tempName)
+      !                   call nvtxRangePushEx(event)
+      !                   end if
+      !             end subroutine
                   
-                  subroutine nvtxEndRange
-                        call nvtxRangePop
-                  end subroutine
+      !             subroutine nvtxEndRange
+      !                   call nvtxRangePop
+      !             end subroutine
       
-      end module nvtx
+      ! end module nvtx
 
       module const_phys
             ! Physical and mathematical constants
@@ -226,7 +226,7 @@
             use poi
             use part
             use omp_lib
-            use nvtx
+            ! use nvtx
 
             implicit none
             integer          :: ipic, j, i, t
@@ -251,9 +251,9 @@
             time_scatter = 0.0d0 
             time_othr    = 0.0d0
 
-            call nvtxStartRange('FULL PROGRAM')
+            !call nvtxStartRange('FULL PROGRAM')
 
-            call nvtxStartRange('INPUT READING')
+            !call nvtxStartRange('INPUT READING')
             
             ! Read input parameters
             call read_input_parameters(out_name, out_path, nthreads)
@@ -277,14 +277,14 @@
             ! Number of initial electrons/ions (every particle is a charge per unit surface C/m^2)      
             npinit = nint(yd*n0/w)         
 
-            call nvtxEndRange
+            !call nvtxEndRange
 
             !******************************************************************************
 
-            call nvtxStartRange('MESH GENERATION')
+            !call nvtxStartRange('MESH GENERATION')
             ! Mesh generation
             call mesh
-            call nvtxEndRange
+            !call nvtxEndRange
 
             ! Constraint CFL      
             vthe  = dsqrt(8.*kB*Te0/(pi*me))
@@ -370,12 +370,12 @@
                   npi_out_of_tile = 0
                   npe_out_of_tile = 0
 
-                  call nvtxStartRange('SCATTER PHASE')
+                  !call nvtxStartRange('SCATTER PHASE')
                   ! Weight particles to the nodes of the mesh to obtain the charge density
                   
                   call scatter
 
-                  call nvtxEndRange
+                  !call nvtxEndRange
 
                   call system_clock(t1)
                   time_scatter = dble(t1 - t0) / dble(nticks_sec)
@@ -386,20 +386,20 @@
                         dpoi(j) = -(rhoi(j)-rhoe(j)) * dy**2 / eps0
                   end do
             
-                  call nvtxStartRange('FIELD SOLVE')
+                  !call nvtxStartRange('FIELD SOLVE')
                   ! Solve for the self-consistent azimuthal electric field
                   !$acc update host(dpoi)
                   call fieldsolve
                   !$acc update host(phi(ny/2), Ey(ny/2), rhoe(ny/2), rhoi(ny/2)) async(3)
-                  call nvtxEndRange
+                  !call nvtxEndRange
 
                   call system_clock(t2)
                   time_poisson = dble(t2 - t1) / dble(nticks_sec)
 
-                  call nvtxStartRange('PUSH')
+                  !call nvtxStartRange('PUSH')
                   ! Update macro-particles positions and velocities
                   call push
-                  call nvtxEndRange
+                  !call nvtxEndRange
 
                   call system_clock(t3)
                   time_push = dble(t3 - t2) / dble(nticks_sec)
@@ -458,7 +458,7 @@
 
             call deallocate_fields()
 
-            call nvtxEndRange
+            !call nvtxEndRange
 
             time_pic_cycle = time_pic_cycle/npic
             call system_clock(t5)
